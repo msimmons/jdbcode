@@ -1,0 +1,13 @@
+package net.contrapt.jdbcode.model
+
+data class ConnectionData(
+        var name: String = "",
+        var url: String = "",
+        var username: String = "",
+        var password: String = "",
+        var validationQuery: String = "",
+        var fetchLimit: Int = 500,
+        var autoCommit: Boolean = false,
+        var schemas: MutableSet<SchemaData> = mutableSetOf(),
+        var error: String? = null
+)
