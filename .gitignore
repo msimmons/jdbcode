@@ -1,0 +1,8 @@
+out
+node_modules
+*.iml
+build
+.gradle
+.idea
+*.jar
+.vscode
