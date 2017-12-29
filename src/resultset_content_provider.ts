@@ -6,7 +6,7 @@ import { resolve } from 'path';
 import { Uri } from 'vscode';
 import { Event } from 'vscode';
 import { TextDocument } from 'vscode';
-import { port } from '_debugger';
+import { ResultSet, SqlStatement } from './models'
 
 export class ResultSetContentProvider implements vscode.TextDocumentContentProvider {
 
@@ -29,7 +29,7 @@ export class ResultSetContentProvider implements vscode.TextDocumentContentProvi
      * @param uri The uri to update
      * @param sqlStatement new sqlStatement to update with
      */
-    update(uri, sqlStatement) {
+    update(uri: Uri, sqlStatement: SqlStatement) {
         this.resultSets[uri.authority] = {sqlStatement: sqlStatement, html: this.getVueDataHtml(sqlStatement)}
         this.onDidChangeEmitter.fire(uri);
     }
@@ -56,28 +56,37 @@ export class ResultSetContentProvider implements vscode.TextDocumentContentProvi
         this.resultSets = {}
     }
 
-	// Expose an event to signal changes of _virtual_ documents
-	// to the editor
+    /**
+     * Get the results for the given queryId
+     */
+    getResultSet(queryId: string) : ResultSet {
+        return this.resultSets[queryId]
+    }
+
+	/** Expose an event to signal changes of _virtual_ documents
+	 * to the editor
+     */
 	get onDidChange() {
 		return this.onDidChangeEmitter.event;
 	}
 
-	// Provider method that takes an uri of the `references`-scheme and
-	// resolves its content by (1) running the reference search command
-	// and (2) formatting the results
+    /**
+     * Provide the html content for the given uri (queryId)
+     * @param uri The uri to provider for
+     */
 	provideTextDocumentContent(uri: vscode.Uri): string | Thenable<string> {
-        let resultSet = this.resultSets.hasOwnProperty(uri.authority) ? this.resultSets[uri.authority] : {}
-        if ( !resultSet.hasOwnProperty('html') ) {
-            resultSet['html'] = this.getVueDataHtml(resultSet['sqlStatement'])
+        let resultSet: ResultSet = this.resultSets.hasOwnProperty(uri.authority) ? this.resultSets[uri.authority] : {}
+        if ( !resultSet.html ) {
+            resultSet.html = this.getVueDataHtml(resultSet.sqlStatement)
         }
-        return resultSet['html']
+        return resultSet.html
     }
     
     getScriptUri(fileName: string) : Uri {
         return vscode.Uri.file(this.context.asAbsolutePath('ui/'+fileName))
     }
 
-    private getVueDataHtml(sqlStatement: object) : string {
+    private getVueDataHtml(sqlStatement: SqlStatement) : string {
         return `
         <html>
         <head>

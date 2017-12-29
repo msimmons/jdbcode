@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import {QuickPickOptions, StatusBarItem, StatusBarAlignment, Uri} from 'vscode'
 import {ResultSetContentProvider} from './resultset_content_provider'
 import { DatabaseTreeProvider } from './database_tree_provider';
+import { SqlStatement } from './models';
 
 let makeUUID = require('node-uuid').v4;
 
@@ -101,11 +102,13 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.showWarningMessage('Choose a db connection first')
             return
         }
-        let queryId = makeUUID()
-        let sqlStatement = {
+        let queryId: string = makeUUID()
+        let sqlStatement: SqlStatement = {
             id: queryId,
-            connection: currentConnection['name'],
-            sql: sql
+            connection: currentConnection['name'] as string,
+            sql: sql,
+            columns: [],
+            rows: []
         }
         /**
          * Open the query result UI and execute the query updating the UI with the results
@@ -143,7 +146,7 @@ export function activate(context: vscode.ExtensionContext) {
      */
     let refresh = vscode.commands.registerCommand("jdbcode.refresh", (queryId) => {
         let uri = Uri.parse(resultProvider.scheme + '://' + queryId)
-        resultProvider.update(uri, {id: queryId})
+        resultProvider.update(uri, {id: queryId} as SqlStatement)
         jvmcode.exports.send('jdbcode.refresh', {id: queryId}).then((reply) => {
             resultProvider.update(uri, reply.body)
         }).catch((error) => {
@@ -156,7 +159,7 @@ export function activate(context: vscode.ExtensionContext) {
      */
     let cancel = vscode.commands.registerCommand("jdbcode.cancel", (queryId) => {
         let uri = Uri.parse(resultProvider.scheme + '://' + queryId)
-        resultProvider.update(uri, {id: queryId})
+        resultProvider.update(uri, {id: queryId} as SqlStatement)
         jvmcode.exports.send('jdbcode.cancel', {id: queryId}).then((reply) => {
             resultProvider.update(uri, reply.body)
         }).catch((error) => {
@@ -169,7 +172,7 @@ export function activate(context: vscode.ExtensionContext) {
      */
     let commit = vscode.commands.registerCommand("jdbcode.commit", (queryId) => {
         let uri = Uri.parse(resultProvider.scheme + '://' + queryId)
-        resultProvider.update(uri, {id: queryId})
+        resultProvider.update(uri, {id: queryId} as SqlStatement)
         jvmcode.exports.send('jdbcode.commit', {id: queryId}).then((reply) => {
             resultProvider.update(uri, reply.body)
         }).catch((error) => {
@@ -182,7 +185,7 @@ export function activate(context: vscode.ExtensionContext) {
      */
     let rollback = vscode.commands.registerCommand("jdbcode.rollback", (queryId) => {
         let uri = Uri.parse(resultProvider.scheme + '://' + queryId)
-        resultProvider.update(uri, {id: queryId})
+        resultProvider.update(uri, {id: queryId} as SqlStatement)
         jvmcode.exports.send('jdbcode.rollback', {id: queryId}).then((reply) => {
             resultProvider.update(uri, reply.body)
         }).catch((error) => {
@@ -206,7 +209,25 @@ export function activate(context: vscode.ExtensionContext) {
      * Export the statement results to CSV and stick them in a buffer
      */
     let exportCsv = vscode.commands.registerCommand("jdbcode.export-csv", (queryId) => {
-        console.log('Exporting ' + queryId)
+        let resultSet = resultProvider.getResultSet(queryId)
+        if ( !resultSet ) {
+            vscode.window.showErrorMessage('No result set found for this query')
+            return
+        }
+        let columns = resultSet.sqlStatement.columns.map((col) => {return '"'+col+'"'}).join(',')
+        let rows = resultSet.sqlStatement.rows.map((row) => {
+            return row.map((value) => {
+                if ( typeof value === 'number' ) return value
+                if ( typeof value === 'boolean' ) return value
+                if ( typeof value === 'undefined' ) return ''
+                if ( typeof value === 'object' ) return ''
+                return '"' + value + '"'
+            }).join(',')
+        }).join('\n')
+        let csv = columns + '\n' + rows
+        vscode.workspace.openTextDocument({language: 'csv', content: csv}).then((doc) => {
+            vscode.window.showTextDocument(doc)
+        })
     });
 
     context.subscriptions.push(connect, execute, disconnect, refresh, cancel, commit, rollback, close, exportCsv, statusBarItem);
