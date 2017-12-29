@@ -34,7 +34,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
         sqlStatement.updateCount = -1
         results?.close()
         sqlStatement.executionCount++
-        sqlStatement.executionTime = measureTimeMillis {
+        sqlStatement.executionTime += measureTimeMillis {
             statement.execute()
         }
         sqlStatement.updateCount = statement.updateCount
@@ -76,7 +76,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
     /**
      * Cancel the current statement if possible
      */
-    fun cancel() {
+    fun cancel() : SqlStatement {
         if ( !statement.isClosed) statement.cancel()
         if ( !connection.isClosed) connection.rollback()
         try {
@@ -85,32 +85,35 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
             logger.warning("$javaClass.cancel(): $e")
         }
         results = null
+        return sqlStatement
     }
 
     /**
      * Commit the current connection
      */
-    fun commit() {
+    fun commit() : SqlStatement {
         if ( !connection.isClosed) {
             sqlStatement.updateCount=-1
             connection.commit()
         }
+        return sqlStatement
     }
 
     /**
      * Rollback the current connection
      */
-    fun rollback() {
+    fun rollback() : SqlStatement {
         if ( !connection.isClosed) {
             sqlStatement.updateCount=-1
             connection.rollback()
         }
+        return sqlStatement
     }
 
     /**
      * Close resources used by this model
      */
-    fun close() {
+    fun close() : SqlStatement {
         cancel()
         try {
             if ( !statement.isClosed) statement.close()
@@ -122,6 +125,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
         } catch (e: SQLException) {
             logger.warning("Closing connection: $e")
         }
+        return sqlStatement
     }
 
     /**

@@ -36,6 +36,8 @@ open class ConnectionService {
     }
 
     open fun disconnect(connection: ConnectionData) {
+        val removeKeys = statements.filter { it.value.config.name == connection.name }.map { it.key }
+        removeKeys.forEach { statements[it]?.close(); statements.remove(it) }
         val dataSource = dataSources.remove(connection.name)
         dataSource?.close(true)
     }
@@ -52,10 +54,37 @@ open class ConnectionService {
         return statement.fetch()
     }
 
+    open fun refresh(id: String) : SqlStatement {
+        val statement = statements[id] ?: throw IllegalArgumentException("Unknown statement id $id")
+        statement.execute()
+        return statement.fetch()
+    }
+
     open fun objects(connection: ConnectionData, schemaData: SchemaData): SchemaData {
         val dataSource = dataSources[connection.name] ?:
                 throw IllegalArgumentException("No pool found for ${connection.name}")
         return schemaDesriber.getObjects(dataSource, schemaData)
+    }
+
+    fun cancel(id: String): SqlStatement {
+        val statement = statements[id] ?: throw IllegalArgumentException("Unknown statement id $id")
+        statement.cancel()
+        return statement.fetch()
+    }
+
+    fun commit(id: String): SqlStatement {
+        val statement = statements[id] ?: throw IllegalArgumentException("Unknown statement id $id")
+        return statement.commit()
+    }
+
+    fun rollback(id: String): SqlStatement {
+        val statement = statements[id] ?: throw IllegalArgumentException("Unknown statement id $id")
+        return statement.rollback()
+    }
+
+    fun close(id: String): SqlStatement {
+        val statement = statements.remove(id) ?: throw IllegalArgumentException("Unknown statement id $id")
+        return statement.close()
     }
 
 }

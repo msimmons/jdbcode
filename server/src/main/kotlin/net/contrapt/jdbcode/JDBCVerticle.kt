@@ -40,8 +40,7 @@ class JDBCVerticle() : AbstractVerticle() {
                     future.complete(JsonObject.mapFrom(connection))
                 } catch (e: Exception) {
                     logger.error("Opening a connection", e)
-                    connection.error = e.toString()
-                    future.complete(JsonObject.mapFrom(connection))
+                    future.fail(e)
                 }
             }, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) {
@@ -65,6 +64,101 @@ class JDBCVerticle() : AbstractVerticle() {
                     logger.error("Executing sql statement", e)
                     sqlStatement.error = e.toString()
                     future.complete(JsonObject.mapFrom(sqlStatement))
+                }
+            }, Handler<AsyncResult<JsonObject>> { ar ->
+                if (ar.failed()) message.fail(1, ar.cause().toString())
+                else message.reply(ar.result())
+            })
+        })
+
+        /**
+         * Re-execute (refresh) the given SQL statement
+         */
+        vertx.eventBus().consumer<JsonObject>("jdbcode.refresh", { message ->
+            vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
+                try {
+                    val id = message.body().getString("id")
+                    val result = connectionService.refresh(id)
+                    future.complete(JsonObject.mapFrom(result))
+                } catch (e: Exception) {
+                    logger.error("Refreshing sql statement", e)
+                    future.fail(e)
+                }
+            }, Handler<AsyncResult<JsonObject>> { ar ->
+                if (ar.failed()) message.fail(1, ar.cause().toString())
+                else message.reply(ar.result())
+            })
+        })
+
+        /**
+         * Cancel the given SQL statement (if possible)
+         */
+        vertx.eventBus().consumer<JsonObject>("jdbcode.cancel", { message ->
+            vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
+                try {
+                    val id = message.body().getString("id")
+                    val result = connectionService.cancel(id)
+                    future.complete(JsonObject.mapFrom(result))
+                } catch (e: Exception) {
+                    logger.error("Cancelling sql statement", e)
+                    future.fail(e)
+                }
+            }, Handler<AsyncResult<JsonObject>> { ar ->
+                if (ar.failed()) message.fail(1, ar.cause().toString())
+                else message.reply(ar.result())
+            })
+        })
+
+        /**
+         * Commit the given SQL statement
+         */
+        vertx.eventBus().consumer<JsonObject>("jdbcode.commit", { message ->
+            vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
+                try {
+                    val id = message.body().getString("id")
+                    val result = connectionService.commit(id)
+                    future.complete(JsonObject.mapFrom(result))
+                } catch (e: Exception) {
+                    logger.error("Committing sql statement", e)
+                    future.fail(e)
+                }
+            }, Handler<AsyncResult<JsonObject>> { ar ->
+                if (ar.failed()) message.fail(1, ar.cause().toString())
+                else message.reply(ar.result())
+            })
+        })
+
+        /**
+         * Rollback the given SQL statement
+         */
+        vertx.eventBus().consumer<JsonObject>("jdbcode.rollback", { message ->
+            vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
+                try {
+                    val id = message.body().getString("id")
+                    val result = connectionService.rollback(id)
+                    future.complete(JsonObject.mapFrom(result))
+                } catch (e: Exception) {
+                    logger.error("Rolling back sql statement", e)
+                    future.fail(e)
+                }
+            }, Handler<AsyncResult<JsonObject>> { ar ->
+                if (ar.failed()) message.fail(1, ar.cause().toString())
+                else message.reply(ar.result())
+            })
+        })
+
+        /**
+         * Close the given SQL statement
+         */
+        vertx.eventBus().consumer<JsonObject>("jdbcode.close", { message ->
+            vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
+                try {
+                    val id = message.body().getString("id")
+                    val result = connectionService.close(id)
+                    future.complete(JsonObject.mapFrom(result))
+                } catch (e: Exception) {
+                    logger.error("Closing sql statement", e)
+                    future.fail(e)
                 }
             }, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())

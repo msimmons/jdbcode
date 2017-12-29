@@ -66,8 +66,8 @@ open class JDBCVerticleTest {
                 .put("driver", JsonObject.mapFrom(driver))
         `when`(mockConnectionService.connect(connection, driver)).thenThrow(RuntimeException("throwing"))
         rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess(){ id ->
-            rule.vertx().eventBus().send("jdbcode.connect", message, context.asyncAssertSuccess<Message<JsonObject>>() { result ->
-                context.assertNotNull(result.body().getString("error"))
+            rule.vertx().eventBus().send("jdbcode.connect", message, context.asyncAssertFailure<Message<JsonObject>>() { result ->
+                context.assertNotNull(result.message, "Should have an error result")
             })
         })
     }
