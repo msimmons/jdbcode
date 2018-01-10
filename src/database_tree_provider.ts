@@ -1,6 +1,5 @@
 import * as vscode from 'vscode'
 import { TreeDataProvider, TreeItem, TreeItemCollapsibleState, EventEmitter } from 'vscode'
-import { connect } from 'net';
 
 export class DatabaseTreeProvider implements TreeDataProvider<object> {
 

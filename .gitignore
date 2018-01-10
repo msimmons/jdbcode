@@ -5,7 +5,6 @@ build
 .gradle
 .idea
 *.jar
-.vscode
 dist
 vsc-extension-quickstart.md
 *.vsix

@@ -26,6 +26,14 @@
     },
     "commands": [
       {
+        "command": "jdbcode.addDriver",
+        "title": "SQL Add Driver"
+      },
+      {
+        "command": "jdbcode.addConnection",
+        "title": "SQL Add Connection"
+      },
+      {
         "command": "jdbcode.connect",
         "title": "SQL Open Connection"
       },
@@ -124,7 +132,6 @@
     "test": "npm run compile && node ./node_modules/vscode/bin/test"
   },
   "devDependencies": {
-    "@angular/cli": "^1.6.0",
     "@types/mocha": "^2.2.42",
     "@types/node": "^8.0.26",
     "mocha": "^3.5.0",

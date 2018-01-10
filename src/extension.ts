@@ -2,9 +2,10 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import {QuickPickOptions, StatusBarItem, StatusBarAlignment, Uri} from 'vscode'
+import {QuickPickOptions, StatusBarItem, StatusBarAlignment, Uri, ConfigurationTarget} from 'vscode'
 import {ResultSetContentProvider} from './resultset_content_provider'
-import { DatabaseTreeProvider } from './database_tree_provider';
+import { DatabaseTreeProvider } from './database_tree_provider'
+import { CompletionProvider } from './completion_provider'
 import { SqlStatement } from './models';
 
 let makeUUID = require('node-uuid').v4;
@@ -13,9 +14,13 @@ let currentConnection : object
 let statusBarItem : StatusBarItem
 let resultProvider: ResultSetContentProvider
 let schemaProvider: DatabaseTreeProvider
+let completionProvider: CompletionProvider
 let jvmcode: vscode.Extension<any>
 let httpPort: number
 let docCount = 0
+const ADD_DRIVER_CHOICE = '+ Add Driver'
+const ADD_CONNECTION_CHOICE = '+ Add Connection'
+const CLOSE_CHOICE = '+ Close'
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -62,7 +67,40 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.workspace.registerTextDocumentContentProvider(resultProvider.scheme, resultProvider)
         schemaProvider = new DatabaseTreeProvider()
         vscode.window.registerTreeDataProvider(schemaProvider.viewId, schemaProvider)
+        completionProvider = new CompletionProvider()
+        vscode.languages.registerCompletionItemProvider('sql', completionProvider)
     }
+
+    /**
+     * Add a new JDBC driver definition
+     */
+    let addDriver = vscode.commands.registerCommand('jdbcode.addDriver', () => {
+        let config = vscode.workspace.getConfiguration("jdbcode")
+        let drivers = config.get('drivers') as Array<object>
+        vscode.window.showInputBox({placeHolder: 'A name for the driver'}).then((name) => {
+            if ( !name ) return
+            if ( drivers.find((d) => { return d['name'] === name }) ) {
+                vscode.window.showErrorMessage('Driver ' + name + ' already exists')
+                return
+            }
+            vscode.window.showInputBox({placeHolder: 'Path to jar file'}).then((jarFile) => {
+                if ( !jarFile ) return
+                vscode.window.showInputBox({placeHolder: 'Driver class name'}).then((driverClass) => {
+                    if ( !driverClass ) return
+                    drivers.push({name: name, jarFile: jarFile, driverClass: driverClass})
+                    config.update('drivers', drivers, ConfigurationTarget.Global)
+                })
+            })
+        })
+
+    })
+
+    /**
+     * Add a new connection definition
+     */
+    let addConnection = vscode.commands.registerCommand('jdbcode.addConnection', () => {
+
+    })
 
     /**
      * Open a connection to the given database defined by connection and driver configs
@@ -71,24 +109,35 @@ export function activate(context: vscode.ExtensionContext) {
         let config = vscode.workspace.getConfiguration("jdbcode")
         let connections = config.get('connections') as Array<object>
         let drivers = config.get('drivers') as Array<object>
-        let choices = ['+ Create New Connection']
-        if ( currentConnection ) choices.push('+ Disconnect '+currentConnection['name'])
+        let choices = [ADD_DRIVER_CHOICE, ADD_CONNECTION_CHOICE]
+        if ( currentConnection ) choices.push(CLOSE_CHOICE + ': ' + currentConnection['name'])
         choices = choices.concat(connections.map((it) => {return it['name']}))
         vscode.window.showQuickPick(choices, {}).then((choice) => {
-            let connection = connections.find((it) => {return it['name'] === choice})
-            if ( !connection ) return;
-            let driver = drivers.find((it) => {return it['name'] === connection['driver']})
-            // Send connection info to server, it will create connection pool if it doesn't already exist
-            jvmcode.exports.send('jdbcode.connect', {connection: connection, driver: driver}).then((reply) => {
-                schemaProvider.setSchemas(connection, reply.body['schemas'])
-                // Set connection as current connection
-                currentConnection = connection
-                statusBarItem.text = '$(database) '+currentConnection['name']
-            }).catch((error) => {
-                vscode.window.showErrorMessage('Error connecting: '+error.message)
-            })
+            if ( !choice ) return
+            else if ( choice.startsWith(ADD_DRIVER_CHOICE) ) vscode.commands.executeCommand('jdbcode.addDriver')
+            else if ( choice.startsWith(ADD_CONNECTION_CHOICE)) vscode.commands.executeCommand('jdbcode.addConnection')
+            else if ( choice.startsWith(CLOSE_CHOICE)) vscode.commands.executeCommand('jdbcode.disconnect')
+            else {
+                let connection = connections.find((it) => {return it['name'] === choice})
+                if ( !connection ) return;
+                let driver = drivers.find((it) => {return it['name'] === connection['driver']})
+                if ( !driver ) vscode.window.showErrorMessage('Could not find driver for connection ' + choice)
+                doConnect(connection, driver)
+            }
         })
     });
+
+    function doConnect(connection: object, driver: object) {
+        // Send connection info to server, it will create connection pool if it doesn't already exist
+        jvmcode.exports.send('jdbcode.connect', {connection: connection, driver: driver}).then((reply) => {
+            schemaProvider.setSchemas(connection, reply.body['schemas'])
+            // Set connection as current connection
+            currentConnection = connection
+            statusBarItem.text = '$(database) '+currentConnection['name']
+        }).catch((error) => {
+            vscode.window.showErrorMessage('Error connecting: '+error.message)
+        })
+    }
 
     /**
      * Execute the currently selected SQL statement on the current connection
@@ -129,16 +178,17 @@ export function activate(context: vscode.ExtensionContext) {
      * Disconnect from current connection, closing all statements etc
      */
     let disconnect = vscode.commands.registerCommand("jdbcode.disconnect", () => {
+        resultProvider.clearResults()
+        schemaProvider.clearSchemas()
+        statusBarItem.text = '$(database)'
+        if ( !currentConnection ) return
         // Tell server to disconnect (close current statements and connections)
         jvmcode.exports.send('jdbcode.disconnect', currentConnection).then((reply) => {
+            currentConnection = null
             console.log('Closed connection')
         }).catch((err) => {
             console.error('Error closing: ' + err)
         })
-        resultProvider.clearResults()
-        schemaProvider.clearSchemas()
-        currentConnection = null
-        statusBarItem.text = '$(database)'
     });
 
     /**
@@ -230,11 +280,14 @@ export function activate(context: vscode.ExtensionContext) {
         })
     });
 
-    context.subscriptions.push(connect, execute, disconnect, refresh, cancel, commit, rollback, close, exportCsv, statusBarItem);
+    context.subscriptions.push(
+        addDriver, addConnection, connect, execute, disconnect, 
+        refresh, cancel, commit, rollback, close, exportCsv, statusBarItem
+    );
 }
 
 
 // this method is called when your extension is deactivated
 export function deactivate() {
-    console.log('Closing all the things')
+    vscode.commands.executeCommand('jdbcode.disconnect')
 }
