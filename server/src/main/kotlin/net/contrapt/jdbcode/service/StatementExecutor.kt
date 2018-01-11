@@ -3,6 +3,7 @@ package net.contrapt.jdbcode.service
 import net.contrapt.jdbcode.model.ConnectionData
 import net.contrapt.jdbcode.model.SqlStatement
 import java.lang.Exception
+import java.math.BigDecimal
 import java.sql.*
 import java.text.SimpleDateFormat
 import java.util.logging.Logger
@@ -140,8 +141,16 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
                     val value = row.getTimestamp(column)
                     return if (value == null) "" else dateFormat.format(value)
                 }
-                Types.BINARY, Types.VARBINARY, Types.LONGVARBINARY, Types.BLOB, Types.CLOB, Types.OTHER -> return row.getString(column)
-                else -> return row.getObject(column) ?: null
+                Types.BINARY, Types.VARBINARY, Types.LONGVARBINARY, Types.BLOB, Types.CLOB, Types.OTHER -> {
+                    return row.getString(column)
+                }
+                else -> {
+                    val value = row.getObject(column)
+                    return when ( value ) {
+                        is BigDecimal -> value.toDouble()
+                        else -> value
+                    }
+                }
             }
         } catch (e: Exception) {
             return e.toString()
