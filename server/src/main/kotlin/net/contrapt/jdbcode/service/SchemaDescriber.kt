@@ -27,6 +27,12 @@ class SchemaDescriber {
         return results
     }
 
+    fun getKeywords(dataSource: DataSource) : Collection<String> {
+        // Additional Keywords
+        val connection = dataSource.connection
+        return connection.metaData.sqlKeywords.split(",").toList()
+    }
+
     fun getObjects(dataSource: DataSource, schemaData: SchemaData) : SchemaData {
         val connection = dataSource.connection
         connection.autoCommit = true

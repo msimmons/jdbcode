@@ -32,7 +32,7 @@ class JDBCVerticle() : AbstractVerticle() {
          */
         vertx.eventBus().consumer<JsonObject>("jdbcode.connect", { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
-                var connection = ConnectionData()
+                var connection : ConnectionData
                 try {
                     connection = message.body().getJsonObject("connection").mapTo(ConnectionData::class.java)
                     val driver = message.body().getJsonObject("driver").mapTo(DriverData::class.java)

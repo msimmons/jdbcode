@@ -32,6 +32,7 @@ open class ConnectionService {
         configs.put(connection.name, connection)
         dataSources.put(connection.name, dataSource)
         connection.schemas.addAll(schemaDesriber.getSchemas(dataSource))
+        connection.keywords.addAll(schemaDesriber.getKeywords(dataSource))
         return connection
     }
 
