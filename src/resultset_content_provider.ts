@@ -43,10 +43,11 @@ export class ResultSetContentProvider implements vscode.TextDocumentContentProvi
     /**
      * Remove a single result from the result sets
      */
-    close(queryId: string) {
-        if ( this.resultSets.hasOwnProperty(queryId) ) {
-            delete this.resultSets[queryId]
+    close(uri: Uri) {
+        if ( this.resultSets.hasOwnProperty(uri.authority) ) {
+            delete this.resultSets[uri.authority]
         }
+        this.onDidChangeEmitter.fire(uri)
     }
 
     /**
@@ -76,6 +77,9 @@ export class ResultSetContentProvider implements vscode.TextDocumentContentProvi
      */
 	provideTextDocumentContent(uri: vscode.Uri): string | Thenable<string> {
         let resultSet: ResultSet = this.resultSets.hasOwnProperty(uri.authority) ? this.resultSets[uri.authority] : {}
+        if ( !resultSet.sqlStatement ) {
+            return this.getNoStatementHtml()
+        }
         if ( !resultSet.html ) {
             resultSet.html = this.getVueDataHtml(resultSet.sqlStatement)
         }
@@ -84,6 +88,18 @@ export class ResultSetContentProvider implements vscode.TextDocumentContentProvi
     
     getScriptUri(fileName: string) : Uri {
         return vscode.Uri.file(this.context.asAbsolutePath('ui/'+fileName))
+    }
+
+    private getNoStatementHtml() : string {
+        return `
+        <html>
+        <head>
+        <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/bootstrap.min.css')}"/>
+        <body>
+          <div class="alert alert-warning" role="alert">The Statement has been closed</div>
+        </body>
+        </html>
+        `
     }
 
     private getVueDataHtml(sqlStatement: SqlStatement) : string {
@@ -95,9 +111,7 @@ export class ResultSetContentProvider implements vscode.TextDocumentContentProvi
             <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/bootstrap.min.css')}" />
             <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/bootstrap-vue.css')}" />
             <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/font-awesome.min.css')}" />
-            <style>
-            .fa { font-size: 12px; }
-            </style>
+            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('main.css')}" />
             <script src="${this.getScriptUri('dist/js/vue.min.js')}"></script>
             <script src="${this.getScriptUri('dist/js/polyfill.min.js')}"></script>
             <script src="${this.getScriptUri('dist/js/bootstrap-vue.js')}"></script>

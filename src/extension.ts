@@ -131,6 +131,7 @@ export function activate(context: vscode.ExtensionContext) {
         // Send connection info to server, it will create connection pool if it doesn't already exist
         jvmcode.exports.send('jdbcode.connect', {connection: connection, driver: driver}).then((reply) => {
             schemaProvider.setSchemas(connection, reply.body['schemas'])
+            completionProvider.setKeywords(reply.body['keywords'])
             // Set connection as current connection
             currentConnection = connection
             statusBarItem.text = '$(database) '+currentConnection['name']
@@ -248,7 +249,7 @@ export function activate(context: vscode.ExtensionContext) {
      */
     let close = vscode.commands.registerCommand("jdbcode.close", (queryId) => {
         let uri = Uri.parse(resultProvider.scheme + '://' + queryId)
-        resultProvider.close(queryId)
+        resultProvider.close(uri)
         jvmcode.exports.send('jdbcode.close', {id: queryId}).then((reply) => {
         }).catch((error) => {
             vscode.window.showErrorMessage('Error closing statement: ' + error.message)
