@@ -25,7 +25,7 @@ var vm = new Vue({
       <div class="button-group col">
         <b-btn :disabled="busy" class="btn-sm btn-success fa fa-refresh" title="Refresh" :href="refreshUri"/>
         <b-btn :disabled="!busy" class="btn-sm btn-danger fa fa-stop" title="Cancel" :href="cancelUri"/>
-        <b-btn :disabled="isQuery || busy" class="btn-sm btn-warning fa fa-check" title="Commit" :href="commitUri"/>
+        <b-btn :disabled="isQuery || busy" class="btn-sm btn-success fa fa-check" title="Commit" :href="commitUri"/>
         <b-btn :disabled="isQuery || busy" class="btn-sm btn-warning fa fa-undo" title="Rollback" :href="rollbackUri"/>
         <b-btn :disabled="!totalRows" class="btn-sm btn-success fa fa-download" title="Export" :href="exportCsvUri"/>
         <b-btn class="btn-sm btn-danger fa fa-close" title="Close" :href="closeUri"/>
@@ -80,6 +80,6 @@ var vm = new Vue({
             this.columns = this.sqlStatement.columns
         }
         this.rows = this.sqlStatement.rows
-        this.busy = !this.sqlStatement.updateCount === null
+        this.busy = (typeof this.sqlStatement.updateCount === 'undefined') || this.sqlStatement.updateCount === null
     }
 })

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode'
 import { TreeDataProvider, TreeItem, TreeItemCollapsibleState, EventEmitter } from 'vscode'
+import { SchemaData, SchemaType, TreeNode } from './models'
 
 export class DatabaseTreeProvider implements TreeDataProvider<object> {
 
@@ -28,56 +29,57 @@ export class DatabaseTreeProvider implements TreeDataProvider<object> {
 		return this.onDidChangeEmitter.event
 	}
 
-    public getTreeItem(element: object) : TreeItem {
-        switch ( element['type'] ) {
+    public getTreeItem(element: TreeNode) : TreeItem {
+        switch ( element.type ) {
             case 'schema':
             case 'catalog': {
-                let item = new TreeItem(element['name'], TreeItemCollapsibleState.Collapsed)
-                item.contextValue = element['type']
-                item.iconPath = "$(database)"
+                let item = new TreeItem(`${element.name} (${element.type})`, TreeItemCollapsibleState.Collapsed)
+                item.contextValue = element.type
+                //item.iconPath =
                 return item
             }
             case 'object_type': {
-                let item = new TreeItem(element['name'], TreeItemCollapsibleState.Collapsed)
-                item.contextValue = element['type']
-                item.iconPath = "$(database)"
+                let item = new TreeItem(element.name, TreeItemCollapsibleState.Collapsed)
+                item.contextValue = element.type
+                //item.iconPath = 
                 return item
             }
             default: {
-                let item = new TreeItem(element['name'], TreeItemCollapsibleState.None)
+                let item = new TreeItem(element.name, TreeItemCollapsibleState.None)
+                item.command = {command: 'jdbcode.describe', arguments: [element], title: 'Describe the object'}
                 return item
             }
         }
     }
 
-    public getChildren(element: object) : object[] | Thenable<object[]> {
+    public getChildren(element: TreeNode) : object[] | Thenable<object[]> {
         if ( !this.schemas ) {
             return []
         }
         else if ( !element ) {
             return this.schemas
         }
-        switch ( element['type'] ) {
+        switch ( element.type ) {
             case 'schema':
             case 'catalog': {
-                return this.getObjects(element)
+                return this.getObjects(element as SchemaData)
             }
             case 'object_type': {
-                return element['objects']
+                return (element as SchemaType).objects
             }
         }
     }
 
-    private getObjects(schema: object) : object[] | Thenable<object[]> {
-        if ( schema['resolved'] ) return schema['object_types']
+    private getObjects(schema: SchemaData) : TreeNode[] | Thenable<TreeNode[]> {
+        if ( schema.resolved ) return schema.object_types
         let api = vscode.extensions.getExtension('contrapt.jvmcode').exports
-        return new Promise<object[]>((resolve, reject) => {
+        return new Promise<TreeNode[]>((resolve, reject) => {
             api.send('jdbcode.objects', {connection: this.connection, schema: schema}).then((reply) => {
-                schema['object_types'] = reply.body['object_types'].map((type) => { 
+                schema.object_types = reply.body['object_types'].map((type) => { 
                     let objects = reply.body['objects'][type]
-                    return {name: type, type: 'object_type', objects: objects}
+                    return {name: type, type: 'object_type', objects: objects} as SchemaType
                 })
-                resolve(schema['object_types'])
+                resolve(schema.object_types)
             })
         })
     }
