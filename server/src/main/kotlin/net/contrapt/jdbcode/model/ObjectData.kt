@@ -1,15 +1,8 @@
 package net.contrapt.jdbcode.model
 
-interface ObjectData
+open class ObjectData(
+        open val owner: String = "",
+        open val name: String = "",
+        open val type: ObjectType = ObjectType.table
+)
 
-data class TableData (
-        val owner: String = "",
-        val name: String = "",
-        val type: String = ""
-) : ObjectData
-
-data class ProcedureData (
-        val owner: String = "",
-        val name: String = "",
-        val type: Int = 0
-) : ObjectData

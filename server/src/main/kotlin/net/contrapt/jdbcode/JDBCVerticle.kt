@@ -8,10 +8,7 @@ import io.vertx.core.Handler
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
-import net.contrapt.jdbcode.model.ConnectionData
-import net.contrapt.jdbcode.model.DriverData
-import net.contrapt.jdbcode.model.SchemaData
-import net.contrapt.jdbcode.model.SqlStatement
+import net.contrapt.jdbcode.model.*
 import net.contrapt.jdbcode.service.ConnectionService
 
 class JDBCVerticle() : AbstractVerticle() {
@@ -199,6 +196,26 @@ class JDBCVerticle() : AbstractVerticle() {
                     logger.error("getting objects", e)
                     schemaData.error = e.toString()
                     future.complete(JsonObject.mapFrom(schemaData))
+                }
+            }, Handler<AsyncResult<JsonObject>> { ar ->
+                if (ar.failed()) message.fail(1, ar.cause().toString())
+                else message.reply(ar.result())
+            })
+        })
+
+        /**
+         * Describe the given object ( table, index columns; procedure params etc)
+         */
+        vertx.eventBus().consumer<JsonObject>("jdbcode.describe", { message ->
+            vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
+                try {
+                    val connectionData = message.body().getJsonObject("connection").mapTo(ConnectionData::class.java)
+                    var objectData = message.body().getJsonObject("dbObject").mapTo(ObjectData::class.java)
+                    objectData = connectionService.describe(connectionData, objectData)
+                    future.complete(JsonObject.mapFrom(objectData))
+                } catch (e: Exception) {
+                    logger.error("getting objects", e)
+                    future.fail(e)
                 }
             }, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())

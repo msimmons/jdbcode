@@ -1,9 +1,6 @@
 package net.contrapt.jdbcode.service
 
-import net.contrapt.jdbcode.model.ConnectionData
-import net.contrapt.jdbcode.model.DriverData
-import net.contrapt.jdbcode.model.SchemaData
-import net.contrapt.jdbcode.model.SqlStatement
+import net.contrapt.jdbcode.model.*
 import org.apache.tomcat.jdbc.pool.DataSource
 import org.apache.tomcat.jdbc.pool.PoolProperties
 
@@ -31,7 +28,7 @@ open class ConnectionService {
         val dataSource = DataSource(config)
         configs.put(connection.name, connection)
         dataSources.put(connection.name, dataSource)
-        connection.schemas.addAll(schemaDesriber.getSchemas(dataSource))
+        connection.schemas.addAll(schemaDesriber.getSchemas(connection, dataSource))
         connection.keywords.addAll(schemaDesriber.getKeywords(dataSource))
         return connection
     }
@@ -86,6 +83,12 @@ open class ConnectionService {
     fun close(id: String): SqlStatement {
         val statement = statements.remove(id) ?: throw IllegalArgumentException("Unknown statement id $id")
         return statement.close()
+    }
+
+    open fun describe(connection: ConnectionData, objectData: ObjectData): ObjectData {
+        val dataSource = dataSources[connection.name] ?:
+                throw IllegalArgumentException("No pool found for ${connection.name}")
+        return schemaDesriber.describeObject(dataSource, objectData)
     }
 
 }

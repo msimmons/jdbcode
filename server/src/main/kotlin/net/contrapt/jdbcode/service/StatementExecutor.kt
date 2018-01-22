@@ -27,6 +27,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
     init {
         connection.autoCommit = autocommit
         statement = connection.prepareStatement(sqlStatement.sql)
+        statement.fetchSize = fetchLimit
     }
 
     fun execute() {
