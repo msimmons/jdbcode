@@ -49,6 +49,10 @@
         "command": "jdbcode.refresh",
         "title": "SQL Refresh Connection",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "jdbcode.find",
+        "title": "SQL Find Object"
       }
     ],
     "menus": {
@@ -117,6 +121,18 @@
               "autoCommit": {
                 "type": "boolean",
                 "default": false
+              },
+              "includeCatalogs": {
+                "type":"boolean",
+                "default": false,
+                "description": "Whether or not to use 'catalog' metadata; otherwise we will just use 'schema'"
+              },
+              "excludes": {
+                "type":"array",
+                "description": "List of schema/catalog names to exclude from metadata",
+                "items": {
+                  "type":"string"
+                }
               }
             }
           }
