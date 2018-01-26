@@ -1,17 +1,22 @@
 package net.contrapt.jdbcode.service
 
+import io.vertx.core.logging.LoggerFactory
 import net.contrapt.jdbcode.model.ConnectionData
 import net.contrapt.jdbcode.model.SqlStatement
+import java.io.InputStream
+import java.io.Reader
 import java.lang.Exception
 import java.math.BigDecimal
+import java.net.URL
 import java.sql.*
+import java.sql.Date
 import java.text.SimpleDateFormat
-import java.util.logging.Logger
+import java.util.*
 import kotlin.system.measureTimeMillis
 
 class StatementExecutor(val config: ConnectionData, val connection: Connection, val sqlStatement: SqlStatement) {
 
-    private val logger : Logger = Logger.getLogger(javaClass.name)
+    private val logger = LoggerFactory.getLogger(javaClass)
 
     private val statement: PreparedStatement
 
@@ -63,7 +68,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
             while ( results?.next() ?: false ) {
                 val row = mutableListOf<Any?>()
                 (1..columnCount).forEach {
-                    row.add(convertToDisplay(results, it))
+                    row.add(convertValue(results, it))
                 }
                 rows.add(row)
                 if (isLimited && rows.size == fetchLimit) {
@@ -84,7 +89,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
         try {
             results?.close()
         } catch (e: SQLException) {
-            logger.warning("$javaClass.cancel(): $e")
+            logger.warn("$javaClass.cancel(): $e")
         }
         results = null
         return sqlStatement
@@ -120,51 +125,64 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
         try {
             if ( !statement.isClosed) statement.close()
         } catch (e: SQLException) {
-            logger.warning("Closing statement: $e")
+            logger.warn("Closing statement: $e")
         }
         try {
             if ( !connection.isClosed) connection.close()
         } catch (e: SQLException) {
-            logger.warning("Closing connection: $e")
+            logger.warn("Closing connection: $e")
         }
         return sqlStatement
     }
 
     /**
-     * Convert certain objects (esp date/timestamp) returned from sql to appropriate
-     * displayable objects
+     * Convert column value to one appropriate for serializing as JSON to client; that is basically native types
+     * and String values
+     *
+     * Should we limit size of blobish things?
      */
-    private fun convertToDisplay(row: ResultSet?, column: Int): Any? {
-        if (row == null) return ""
+    private fun convertValue(row: ResultSet?, column: Int): Any? {
+        if ( row == null ) return ""
+        val value = row.getObject(column)
         try {
-            when (row.metaData.getColumnType(column)) {
-                Types.DATE, Types.TIMESTAMP, Types.TIME -> {
-                    val value = row.getTimestamp(column)
-                    return if (value == null) "" else dateFormat.format(value)
-                }
-                Types.BINARY, Types.VARBINARY, Types.LONGVARBINARY, Types.BLOB, Types.CLOB, Types.OTHER -> {
-                    return row.getString(column)
-                }
-                else -> {
-                    val value = row.getObject(column)
-                    return when ( value ) {
-                        is BigDecimal -> value.toDouble()
-                        else -> value
-                    }
-                }
+            return when ( value ) {
+                null -> ""
+                is Array<*> -> value.joinToString(",", "[", "]") { it.toString() }
+                is InputStream -> "inputStream"
+                is BigDecimal -> value.toDouble()
+                is Blob -> Base64.getEncoder().encodeToString(value.getBytes(0, value.length().toInt()))
+                is ByteArray -> Base64.getEncoder().encodeToString(value)
+                is Reader -> value.readText()
+                is Date -> formatDateTime(value)
+                is Time -> formatDateTime(value)
+                is Timestamp -> formatDateTime(value)
+                is SQLXML -> value.string
+                is URL -> value.toExternalForm()
+                is String, is Int, is Long, is Float, is Double, is Boolean -> value
+                else -> value.toString()
             }
-        } catch (e: Exception) {
-            return e.toString()
+        }
+        catch (e: Exception) {
+            return value?.toString() ?: ""
         }
     }
 
     companion object {
 
-        private val DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss"
+        private val DEFAULT_DATE_FORMAT = "yyyy-MM-dd"
+        private val DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSSZ"
+        private val DEFAULT_TIME_FORMAT = "HH:mm:ss.SSSZ"
+
         private var dateFormat = SimpleDateFormat(DEFAULT_DATE_FORMAT)
+        private var timeFormat = SimpleDateFormat(DEFAULT_TIME_FORMAT)
+        private var dateTimeFormat = SimpleDateFormat(DEFAULT_DATETIME_FORMAT)
 
         fun setDateFormat(format: String) {
             dateFormat = SimpleDateFormat(format)
         }
+
+        fun formatDateTime(value: Date) : String = dateFormat.format(value)
+        fun formatDateTime(value: Time) : String = timeFormat.format(value)
+        fun formatDateTime(value: Timestamp) : String = dateTimeFormat.format(value)
     }
 }
