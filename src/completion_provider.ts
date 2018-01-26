@@ -35,8 +35,8 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
     }
 
     provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
-        // Parse from beginning to end of current sql statement and determine what is needed at the cursor
         let range = document.getWordRangeAtPosition(position)
+        console.log('provide completion '+document.getText(range))
         return this.keywords.concat(this.objects)
     }
 }
