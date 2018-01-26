@@ -16,4 +16,8 @@ data class TableData (
     fun addForeignKey(owner: String, name: String, pkcolumn: String, fkcolumn: String) {
         columns.firstOrNull { it.name == fkcolumn }?.references = "${owner}.${name}.${pkcolumn}"
     }
+
+    fun addIndex(column: String, index: IndexData) {
+        columns.find { it.name == column }?.indices?.add(index)
+    }
 }

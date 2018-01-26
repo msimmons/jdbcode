@@ -124,6 +124,16 @@ class SchemaDescriber {
             val fkcolumn = fkeys.getString("FKCOLUMN_NAME")
             tableData.addForeignKey(owner, name, pkcolumn, fkcolumn)
         }
+        val indices = connection.metaData.getIndexInfo(null, objectData.owner, objectData.name, false, false)
+        while ( indices.next() ) {
+            val name = indices.getString("INDEX_NAME")
+            val unique = !indices.getBoolean("NON_UNIQUE")
+            val position = indices.getInt("ORDINAL_POSITION")
+            val column = indices.getString("COLUMN_NAME")
+            val direction = indices.getString("ASC_OR_DESC")
+            val filter = indices.getString("FILTER_CONDITION")
+            tableData.addIndex(column, IndexData(name, unique, position, direction, filter))
+        }
         return tableData
     }
 

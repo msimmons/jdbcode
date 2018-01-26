@@ -10,5 +10,6 @@ data class ColumnData (
         val nullable: String = "",
         val autoincrement: String = "",
         var keySequence: Int? = null,
-        var references: String? = null
+        var references: String? = null,
+        val indices: MutableSet<IndexData> = mutableSetOf()
 )
