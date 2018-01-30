@@ -4,7 +4,8 @@ data class TableData (
         override val owner: String = "",
         override val name: String = "",
         override val type: ObjectType = ObjectType.table,
-        val columns: MutableSet<ColumnData> = mutableSetOf()
+        val columns: MutableSet<ColumnData> = mutableSetOf(),
+        val indices: MutableSet<String> = mutableSetOf()
 ) : ObjectData() {
 
     constructor(objectData: ObjectData) : this(objectData.owner, objectData.name, objectData.type)
@@ -18,6 +19,7 @@ data class TableData (
     }
 
     fun addIndex(column: String, index: IndexData) {
+        indices.add(index.name)
         columns.find { it.name == column }?.indices?.add(index)
     }
 }

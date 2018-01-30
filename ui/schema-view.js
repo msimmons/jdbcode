@@ -11,12 +11,13 @@ var vm = new Vue({
             <th nowrap class="results">null?</th>
             <th nowrap class="results">auto?</th>
             <th nowrap class="results">references</th>
-            <th nowrap class="results"></th>
+            <th id="idx" nowrap class="results" :colspan="dbObject.indices.length">indices</th>
         </thead>
         <tbody>
             <tr v-for="column in dbObject.columns">
                 <td nowrap class="results">
-                    {{column.name}}
+                  {{column.name}}
+                  <span v-if="column.keySequence" :title="column.keySequence" class="fa fa-key">
                 </td>
                 <td nowrap class="results">{{column.type}}</td>
                 <td nowrap class="results">{{column.size}}</td>
@@ -24,16 +25,15 @@ var vm = new Vue({
                 <td nowrap class="results">{{column.nullable}}</td>
                 <td nowrap class="results">{{column.autoincrement}}</td>
                 <td nowrap class="results">{{column.references}}</td>
-                <td nowrap class="results">
-                    <span v-if="column.keySequence" class="fa fa-key" :title="column.keySequence"/>
-                    <span v-for="index in column.indices" class="fa fa-filter" :title="indexInfo(index)">{{index.position}}</span>
-                </td>
+                    <!td width="30" nowrap class="results" v-if="column.keySequence" class="fa fa-key"></td-->
+                    <td width="30" nowrap class="result" v-for="index in column.indices" :title="indexTitle(index)">
+                      <i :class="indexClass(index)">{{index.position}}</i>
+                    </td>
+                    <!--span v-for="index in column.indices" :class="indexClass(index)" :title="indexTitle(index)">{{index.position}}</span-->
             </tr>
         </tbody>
     </table>
-    </div>
-    <div class="container-fluid" v-if="!isTable">
-    <table class="results table-hover table-condensed table-bordered" >
+    <table class="results table-hover table-condensed table-bordered" v-else>
         <thead>
             <th nowrap class="results" v-for="header in headers">{{header.label}}</th>
         </thead>
@@ -99,11 +99,11 @@ var vm = new Vue({
                     ]
                 }
             },
-            columns: [],
             headers: [],
             rows: [],
             busy: true,
-            dbObject: {}
+            dbObject: {},
+            badgeClasses: ['primary', 'success', 'info', 'warning', 'danger', 'default']
         }
     },
     computed: {
@@ -123,14 +123,17 @@ var vm = new Vue({
                 })
             })
         },
-        indexInfo: function(index) {
+        indexClass: function(index) {
+            let i = this.dbObject.indices.findIndex((name) => { return name === index.name })
+            return 'result badge badge-pill badge-' + this.badgeClasses[i]
+        },
+        indexTitle: function(index) {
             let unique = index.unique ? 'unique' : ''
-            return `${index.name}(${index.position} ${unique} ${index.direction})`
+            return `${index.name}(${unique} ${index.direction})`
         }
     },
     created: function () {
         this.dbObject = window['db-object']
-        this.columns = this.dbObject.columns
         this.headers = this.headerMap[this.dbObject.type].headers
         let rowProperty = this.headerMap[this.dbObject.type].rowProperty
         this.rows = this.createRows(this.headers, this.dbObject[rowProperty])
