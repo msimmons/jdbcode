@@ -11,20 +11,18 @@ class SchemaDescriber {
         val connection = dataSource.connection
         connection.autoCommit = true
         try {
-            if ( connectionData.includeCatalogs ) {
-                val catalogRows = connection.metaData.catalogs
-                while (catalogRows.next()) {
-                    var catalog = SchemaData(catalogRows.getString(1), "catalog")
-                    if ( !connectionData.excludes.contains(catalog.name) ) {
-                        catalog = getObjects(dataSource, catalog)
-                        results.add(catalog)
-                    }
+            val catalogRows = connection.metaData.catalogs
+            while (catalogRows.next()) {
+                var catalog = SchemaData(catalogRows.getString(1), "catalog")
+                if ( shouldInclude(catalog.name, connectionData) ) {
+                    catalog = getObjects(dataSource, catalog)
+                    results.add(catalog)
                 }
             }
             val schemaRows = connection.metaData.schemas
             while (schemaRows.next()) {
                 var schema = SchemaData(schemaRows.getString(1), "schema")
-                if ( !connectionData.excludes.contains(schema.name) ) {
+                if ( shouldInclude(schema.name, connectionData) ) {
                     schema = getObjects(dataSource, schema)
                     results.add(schema)
                 }
@@ -34,6 +32,12 @@ class SchemaDescriber {
             connection.close()
         }
         return results
+    }
+
+    private fun shouldInclude(name: String, connectionData: ConnectionData) : Boolean {
+        var include = connectionData.includes.contains(name) || connectionData.includes.size == 0
+        include = !connectionData.excludes.contains(name)
+        return include
     }
 
     fun getKeywords(dataSource: DataSource) : Collection<String> {
