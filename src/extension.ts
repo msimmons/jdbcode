@@ -145,6 +145,7 @@ export function activate(context: vscode.ExtensionContext) {
                 // Set connection as current connection
                 currentConnection = connection
                 statusBarItem.text = '$(database) ' + currentConnection['name']
+                vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', true)
             }).catch((error) => {
                 vscode.window.showErrorMessage('Error connecting: ' + error.message)
             })
@@ -199,6 +200,7 @@ export function activate(context: vscode.ExtensionContext) {
         // Tell server to disconnect (close current statements and connections)
         jvmcode.exports.send('jdbcode.disconnect', currentConnection).then((reply) => {
             currentConnection = null
+            vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', false)
             console.log('Closed connection')
         }).catch((err) => {
             console.error('Error closing: ' + err)

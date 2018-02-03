@@ -20,7 +20,8 @@
       "explorer": [
         {
           "id": "jdbcode.schemaTree",
-          "name": "Database"
+          "name": "Database",
+          "when": "jdbcode.context.isConnected"
         }
       ]
     },
