@@ -11,7 +11,7 @@ var vm = new Vue({
             <th nowrap class="results">null?</th>
             <th nowrap class="results">auto?</th>
             <th nowrap class="results">references</th>
-            <th id="idx" nowrap class="results" :colspan="dbObject.indices.length">indices</th>
+            <!--th id="idx" nowrap class="results" :colspan="dbObject.indices.length">indices</th-->
         </thead>
         <tbody>
             <tr v-for="column in dbObject.columns">
