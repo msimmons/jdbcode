@@ -14,7 +14,7 @@ class SchemaDescriber {
             val catalogRows = connection.metaData.catalogs
             while (catalogRows.next()) {
                 var catalog = SchemaData(catalogRows.getString(1), "catalog")
-                if ( shouldInclude(catalog.name, connectionData) ) {
+                if ( shouldInclude("catalog:${catalog.name}", connectionData) ) {
                     catalog = getObjects(dataSource, catalog)
                     results.add(catalog)
                 }
@@ -22,7 +22,7 @@ class SchemaDescriber {
             val schemaRows = connection.metaData.schemas
             while (schemaRows.next()) {
                 var schema = SchemaData(schemaRows.getString(1), "schema")
-                if ( shouldInclude(schema.name, connectionData) ) {
+                if ( shouldInclude("schema:${schema.name}", connectionData) ) {
                     schema = getObjects(dataSource, schema)
                     results.add(schema)
                 }
