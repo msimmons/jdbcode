@@ -1,4 +1,4 @@
-# JDBCode
+# JDBCode (server)
 
 ## JDBC extension for JVMCode
 
