@@ -1,52 +1,6 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2014 by Bart Kiers
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- * Project      : sqlite-parser; an ANTLR4 grammar for SQLite
- *                https://github.com/bkiers/sqlite-parser
- * Developed by : Bart Kiers, bart@big-o.nl
- */
-
 grammar Sql;
 
-@header {
-  package net.contrapt.jdbcode;
-}
-
-parse
- : ( statement_list | error )* EOF
- ;
-
-error
- : UNEXPECTED_CHAR 
-   { 
-     throw new RuntimeException("UNEXPECTED_CHAR=" + $UNEXPECTED_CHAR.text); 
-   }
- ;
-
-statement_list
+sql_file
  : ';'* statement ( ';'+ statement )* ';'*
  ;
 
@@ -67,7 +21,15 @@ select_statement
    (K_FROM table_list)?
    (K_WHERE where_clause)?
    (K_GROUP K_BY group_clause)?
+   (compound_operator select_statement)*
    (K_ORDER K_BY order_clause)?
+ ;
+
+compound_operator
+ : K_UNION
+ | K_UNION K_ALL
+ | K_INTERSECT
+ | K_MINUS
  ;
 
 insert_statement
@@ -85,15 +47,34 @@ delete_statement
    (K_WHERE where_clause)?
  ;
 
+table_name
+ : IDENTIFIER
+ ;
+
 fq_table_name
  : ( owner_name '.' )? table_name
  ;
 
-owner_name
- : IDENTIFIER
+table_expression
+ : fq_table_name ( K_AS? alias_name )?
+ | '(' select_statement ')' K_AS? alias_name
  ;
 
-table_name
+join_operator
+ : ','
+ | K_NATURAL? ( K_LEFT K_OUTER? | K_INNER | K_CROSS )? K_JOIN
+ ;
+
+join_constraint
+ : ( K_ON expr
+   | K_USING '(' column_name ( ',' column_name )* ')' )?
+ ;
+
+table_list
+ : table_expression ( ',' table_expression | join_operator table_expression join_constraint )*
+ ;
+
+owner_name
  : IDENTIFIER
  ;
 
@@ -105,18 +86,18 @@ column_name
  : IDENTIFIER
  ;
 
+column_wildcard
+ : '*'
+ ;
+
 column_list
  : column_expr (',' column_expr)*
  ;
 
 column_expr
- : (alias_name '.')? '*'
- | (alias_name '.')? column_name
- | expr ( K_AS? alias_name)?
- ;
-
-table_list
- : fq_table_name ( K_AS? alias_name )?
+ : (alias_name '.')? column_wildcard
+ | (alias_name '.')? column_name (K_AS? column_alias)?
+ | expr ( K_AS? column_alias)?
  ;
 
 where_clause
@@ -127,12 +108,44 @@ set_clause
  : column_name '=' expr (',' column_name '=' expr)*
  ;
 
+order_direction
+ : K_ASC
+ | K_DESC
+ ;
+
+order_expr
+ : NUMERIC_LITERAL order_direction?
+ | (alias_name '.')? column_name order_direction?
+ ;
+
 order_clause
- :
+ : order_expr (',' order_expr)*
  ;
 
 group_clause
  :
+ ;
+
+operator
+ : '||'
+ | ('*'|'/'|'%')
+ | ('<'| '>'| '<='| '>='| '!='| '<>')
+ | (K_IS | K_IS K_NOT | K_IN | K_LIKE | K_AND | K_OR)
+ ;
+ 
+unary_operator
+ : '-'
+ | '+'
+ | '~'
+ | K_NOT
+ ;
+
+value_expr
+ : literal_value
+ | unary_operator value_expr
+ | value_expr operator value_expr
+ | function_name '(' (value_expr (',' value_expr)*)? ')'
+ | '(' value_expr ')'
  ;
 
 expr
@@ -165,27 +178,6 @@ expr
  | K_CASE expr? ( K_WHEN expr K_THEN expr )+ ( K_ELSE expr )? K_END
  ;
 
-ordering_term
- : expr ( K_COLLATE collation_name )? ( K_ASC | K_DESC )?
- ;
-
-join_operator
- : ','
- | K_NATURAL? ( K_LEFT K_OUTER? | K_INNER | K_CROSS )? K_JOIN
- ;
-
-join_constraint
- : ( K_ON expr
-   | K_USING '(' column_name ( ',' column_name )* ')' )?
- ;
-
-compound_operator
- : K_UNION
- | K_UNION K_ALL
- | K_INTERSECT
- | K_EXCEPT
- ;
-
 signed_number
  : ( '+' | '-' )? NUMERIC_LITERAL
  ;
@@ -197,12 +189,6 @@ literal_value
  | K_NULL
  ;
 
-unary_operator
- : '-'
- | '+'
- | '~'
- | K_NOT
- ;
 
 error_message
  : STRING_LITERAL
@@ -509,6 +495,7 @@ K_LEFT : L E F T;
 K_LIKE : L I K E;
 K_LIMIT : L I M I T;
 K_MATCH : M A T C H;
+K_MINUS : M I N U S;
 K_NATURAL : N A T U R A L;
 K_NO : N O;
 K_NOT : N O T;

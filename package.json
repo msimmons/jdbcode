@@ -127,19 +127,19 @@
                 "default": false
               },
               "includes": {
-                "type":"array",
+                "type": "array",
                 "description": "List of schema/catalog names to include from metadata. Empty list includes all accessible",
                 "items": {
                   "description": "The name of the schema/catalog to include in the form in the form 'schema|catalog:name'",
-                  "type":"string"
+                  "type": "string"
                 }
               },
               "excludes": {
-                "type":"array",
+                "type": "array",
                 "description": "List of schema/catalog names to exclude from metadata",
                 "items": {
                   "description": "The name of the schema/catalog to exclude in the form 'schema|catalog:name'",
-                  "type":"string"
+                  "type": "string"
                 }
               }
             }
@@ -163,6 +163,7 @@
     "vscode": "^1.1.5"
   },
   "dependencies": {
+    "antlr4": "^4.7.1",
     "node-uuid": "^1.4.8"
   },
   "extensionDependencies": [

@@ -3,3 +3,7 @@ apply plugin: 'antlr'
 dependencies {
     antlr "org.antlr:antlr4:$antlr_version"
 }
+
+generateGrammarSource {
+    arguments += ['-lib', 'src/main/antlr/net/contrapt/jdbcode']
+}

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode'
 import { CompletionItemKind } from 'vscode';
 import { SchemaData } from './models'
+import { SqlParser } from './sql_parser'
 
 export class CompletionProvider implements vscode.CompletionItemProvider {
 
@@ -35,8 +36,17 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
     }
 
     provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
-        let range = document.getWordRangeAtPosition(position)
-        console.log('provide completion '+document.getText(range))
-        return this.keywords.concat(this.objects)
+        // Find the beginning of the SQL statement (for now beginning of line)
+        let start = new vscode.Position(position.line, 0)
+        let sql = document.lineAt(position.line).text
+        // Parse from beginning to end (for now end of line)
+        let parser = new SqlParser()
+        let result = parser.parse(sql, position)
+        console.log(result)
+        // Find the type of thing needed at position
+        let item = new vscode.CompletionItem(result['type']+' '+result['of'], CompletionItemKind.Class)
+        return this.keywords.concat([item])
     }
+
+    
 }
