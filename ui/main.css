@@ -2,10 +2,11 @@
 
 table.results {
     border-collapse: collapse;
-    border-spacing:1px;
-    width: 100%;
-    min-width: 1000px;
-    overflow: auto
+    border: 0px;
+    display: block;
+    overflow-x: scroll;
+    overflow-y: scroll;
+    height: 90vh;
 }
 
 th.results {
@@ -14,9 +15,10 @@ th.results {
     margin: 4px;
     resize: horizontal;
     overflow: hidden;
-    max-width: 0;
     font-family: 'Droid Sans Mono', monospace, 'Droid Sans Fallback';
     font-size: 14px;
+    height: 30px;
+    text-align: center;
     background: lightgoldenrodyellow;
 }
 

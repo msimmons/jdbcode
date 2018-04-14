@@ -34,9 +34,11 @@ var vm = new Vue({
         <input type="text" placeholder="Filter..." style="width:100%;"/>
       </div>
     </div>
-    <table class="results table-hover table-condensed table-bordered " v-if="!hasError">
+    <table class="results table-hover" v-if="!hasError">
         <thead>
-            <th nowrap class="results" v-for="column in columns">{{column}}</th>
+            <tr>
+               <th nowrap class="results" v-for="column in columns">{{column}}</th>
+            </tr>
         </thead>
         <tbody>
             <tr v-for="row in rows">
@@ -44,7 +46,6 @@ var vm = new Vue({
             </tr>
         </tbody>
     </table>
-    </div>
 `,
     data: function () {
         return {
