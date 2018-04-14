@@ -35,9 +35,7 @@ class SchemaDescriber {
     }
 
     private fun shouldInclude(name: String, connectionData: ConnectionData) : Boolean {
-        var include = connectionData.includes.contains(name) || connectionData.includes.size == 0
-        include = !connectionData.excludes.contains(name)
-        return include
+        return (connectionData.includes.contains(name) || connectionData.includes.size == 0) && !connectionData.excludes.contains(name)
     }
 
     fun getKeywords(dataSource: DataSource) : Collection<String> {

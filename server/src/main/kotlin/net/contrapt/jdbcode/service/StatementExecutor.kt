@@ -163,6 +163,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
             }
         }
         catch (e: Exception) {
+            logger.warn("Exception converting $value (${value::class})", e)
             return value?.toString() ?: ""
         }
     }

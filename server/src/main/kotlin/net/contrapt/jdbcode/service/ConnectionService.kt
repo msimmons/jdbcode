@@ -34,10 +34,21 @@ open class ConnectionService {
     }
 
     open fun disconnect(connection: ConnectionData) {
-        val removeKeys = statements.filter { it.value.config.name == connection.name }.map { it.key }
-        removeKeys.forEach { statements[it]?.close(); statements.remove(it) }
+        closeStatements(connection)
         val dataSource = dataSources.remove(connection.name)
         dataSource?.close(true)
+    }
+
+    private fun closeStatements(connection: ConnectionData) {
+        val removeKeys = statements.filter { it.value.config.name == connection.name }.map { it.key }
+        removeKeys.forEach {
+            try {
+                statements[it]?.close()
+            }
+            finally {
+                statements.remove(it)
+            }
+        }
     }
 
     open fun execute(sqlStatement: SqlStatement): SqlStatement {
