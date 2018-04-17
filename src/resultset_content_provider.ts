@@ -30,7 +30,7 @@ export class ResultSetContentProvider implements vscode.TextDocumentContentProvi
      * @param sqlStatement new sqlStatement to update with
      */
     update(uri: Uri, sqlStatement: SqlStatement) {
-        this.resultSets[uri.authority] = {sqlStatement: sqlStatement, html: this.getVueDataHtml(sqlStatement)}
+        this.resultSets[uri.authority] = {sqlStatement: sqlStatement, html: this.getSlickDataHtml(sqlStatement)}
         this.onDidChangeEmitter.fire(uri);
     }
 
@@ -81,7 +81,8 @@ export class ResultSetContentProvider implements vscode.TextDocumentContentProvi
             return this.getNoStatementHtml()
         }
         if ( !resultSet.html ) {
-            resultSet.html = this.getVueDataHtml(resultSet.sqlStatement)
+            //resultSet.html = this.getVueDataHtml(resultSet.sqlStatement)
+            resultSet.html = this.getSlickDataHtml(resultSet.sqlStatement)
         }
         return resultSet.html
     }
@@ -122,6 +123,38 @@ export class ResultSetContentProvider implements vscode.TextDocumentContentProvi
         <body>
             <div id="app"/>
             <script src="${this.getScriptUri('result-view.js')}"></script>
+        </body>
+        </html>
+        `
+    }
+
+    private getSlickDataHtml(sqlStatement: SqlStatement) : string {
+        return `
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Result View</title>
+            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/bootstrap.min.css')}" />
+            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/bootstrap-vue.css')}" />
+            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/font-awesome.min.css')}" />
+            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/slick.grid.css')}" />
+            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/jquery-ui.custom.min.css')}" />
+            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('main.css')}" />
+            <script src="${this.getScriptUri('dist/js/jquery-1.11.2.min.js')}"></script>
+            <script src="${this.getScriptUri('dist/js/jquery.event.drag-2.3.0.js')}"></script>
+            <script src="${this.getScriptUri('dist/js/slick.core.js')}"></script>
+            <script src="${this.getScriptUri('dist/js/slick.grid.js')}"></script>
+            <script src="${this.getScriptUri('dist/js/vue.min.js')}"></script>
+            <script src="${this.getScriptUri('dist/js/polyfill.min.js')}"></script>
+            <script src="${this.getScriptUri('dist/js/bootstrap-vue.js')}"></script>
+            <script>
+                window['sql-statement'] = ${JSON.stringify(sqlStatement)}
+            </script>
+        </head>
+        <body>
+            <div id="result-control"/>
+            <div id="result-grid"/>
+            <script src="${this.getScriptUri('result-view-grid.js')}"></script>
         </body>
         </html>
         `

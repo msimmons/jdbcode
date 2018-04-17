@@ -4,9 +4,18 @@ table.results {
     border-collapse: collapse;
     border: 0px;
     display: block;
-    overflow-x: scroll;
-    overflow-y: scroll;
     height: 90vh;
+    overflow-x: scroll;
+}
+
+thead.results {
+    display: table-column-group;
+    position: fixed;
+}
+
+tbody.results {
+    overflow-y: scroll;
+    height: 80vh;
 }
 
 th.results {
@@ -26,10 +35,21 @@ td.results {
     border: 1px solid black;
     padding: 0;
     margin: 0px;
-    max-width: 0;
     max-height: 20px;
     overflow: hidden;
     text-overflow: ellipsis;
     font-family: 'Droid Sans Mono', monospace, 'Droid Sans Fallback';
     font-size: 12px;
+}
+
+.result-grid-header {
+    font-family: 'Droid Sans Mono', monospace, 'Droid Sans Fallback';
+    font-weight: bold;
+    font-size: 16px;
+    text-align: center;
+}
+
+.result-grid-row {
+    font-family: 'Droid Sans Mono', monospace, 'Droid Sans Fallback';
+    font-size: 14px;
 }
