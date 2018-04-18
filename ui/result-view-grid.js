@@ -1,34 +1,13 @@
 var grid;
-var columns = [];
-var data = []
 var options = {
     enableCellNavigation: true,
     enableColumnReorder: false,
     enableTextSelectionOnCells: true,
     syncColumnCellResize: true
 };
-$(function () {
-    var sqlStatement = window['sql-statement']
-    columns = sqlStatement.columns.map((column) => {
-        return {id: column, name: column, field: column, headerCssClass: 'result-grid-header', cssClass: 'result-grid-row'}
-    });
-    data = sqlStatement.rows.map((row) => {
-        var rowObject = {};
-        columns.forEach((column, ndx) => {
-            rowObject[column.name] = row[ndx];
-        })
-        return rowObject;
-    })
-    var width = window.innerWidth - 75
-    var height = window.innerHeight - 50
-    $('#result-grid').css({'width': width+'px','height': height+'px'})
-    grid = new Slick.Grid("#result-grid", data, columns, options);
-
-  })
-
-  var vm = new Vue({
-    el: '#result-control',
-    template: `
+var vm = new Vue({
+  el: '#result-control',
+  template: `
     <div class="container-fluid">
     <div v-if="hasError">
       <b-alert show variant="danger">{{sqlStatement.error}}</b-alert>
@@ -64,36 +43,52 @@ $(function () {
       </div>
       <div id="result-grid" />
 `,
-    data: function () {
-        return {
-            columns: [],
-            rows: [],
-            sortBy: null,
-            sortDesc: false,
-            filter: null,
-            busy: true,
-            sqlStatement: null
-        }
-    },
-    computed: {
-        totalRows: function () { return this.sqlStatement.rows.length; },
-        hasError: function () { return this.sqlStatement.error != null },
-        refreshUri: function() { return this.commandUri('refresh') },
-        cancelUri: function() { return this.commandUri('cancel') },
-        commitUri: function() { return this.commandUri('commit') },
-        rollbackUri: function() { return this.commandUri('rollback') },
-        exportCsvUri: function() { return this.commandUri('export-csv') },
-        closeUri: function() { return this.commandUri('close')},
-        isQuery: function() { return !this.busy && this.sqlStatement.updateCount == -1 && this.sqlStatement.columns }
-    },
-    methods: {
-        commandUri: function(command) {
-            var id = this.sqlStatement.id
-            return encodeURI('command:jdbcode.'+command+'?'+ JSON.stringify([id]))
-        }
-    },
-    created: function () {
-        this.sqlStatement = window['sql-statement']
-        this.busy = (typeof this.sqlStatement.updateCount === 'undefined') || this.sqlStatement.updateCount === null
-    }
+  data: function () {
+      return {
+          columns: [],
+          rows: [],
+          sortBy: null,
+          sortDesc: false,
+          filter: null,
+          busy: true,
+          sqlStatement: null
+      }
+  },
+  computed: {
+      totalRows: function () { return this.sqlStatement.rows.length; },
+      hasError: function () { return this.sqlStatement.error != null },
+      refreshUri: function() { return this.commandUri('refresh') },
+      cancelUri: function() { return this.commandUri('cancel') },
+      commitUri: function() { return this.commandUri('commit') },
+      rollbackUri: function() { return this.commandUri('rollback') },
+      exportCsvUri: function() { return this.commandUri('export-csv') },
+      closeUri: function() { return this.commandUri('close')},
+      isQuery: function() { return !this.busy && this.sqlStatement.updateCount == -1 && this.sqlStatement.columns }
+  },
+  methods: {
+      commandUri: function(command) {
+          var id = this.sqlStatement.id
+          return encodeURI('command:jdbcode.'+command+'?'+ JSON.stringify([id]))
+      }
+  },
+  created: function () {
+      this.sqlStatement = window['sql-statement']
+      this.busy = (typeof this.sqlStatement.updateCount === 'undefined') || this.sqlStatement.updateCount === null
+  },
+  mounted: function() {
+      var columns = this.sqlStatement.columns.map((column) => {
+          return {id: column, name: column, field: column, headerCssClass: 'result-grid-header', cssClass: 'result-grid-row'}
+      });
+      var data = this.sqlStatement.rows.map((row) => {
+          var rowObject = {};
+          columns.forEach((column, ndx) => {
+              rowObject[column.name] = row[ndx];
+          })
+          return rowObject;
+      })
+      var width = window.innerWidth - 75
+      var height = window.innerHeight - 50
+      $('#result-grid').css({'width': width+'px','height': height+'px'})
+      grid = new Slick.Grid("#result-grid", data, columns, options);
+  }
 })
