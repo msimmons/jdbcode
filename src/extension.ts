@@ -3,11 +3,11 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { QuickPickOptions, StatusBarItem, StatusBarAlignment, Uri, ConfigurationTarget, ProgressLocation, Progress, Disposable } from 'vscode'
-import { ResultSetContentProvider } from './resultset_content_provider'
 import { SchemaContentProvider } from './schema_content_provider'
 import { DatabaseTreeProvider } from './database_tree_provider'
 import { CompletionProvider } from './completion_provider'
-import { SqlStatement, SchemaData, SchemaObject } from './models';
+import { SqlStatement, SchemaData, SchemaObject } from './models'
+import { ResultSetWebview } from './resultset_webview'
 
 let makeUUID = require('node-uuid').v4;
 
@@ -15,13 +15,14 @@ let currentConnection: object
 let schemas: SchemaData[]
 let schemaObjects: SchemaObject[]
 let statusBarItem: StatusBarItem
-let resultProvider: ResultSetContentProvider
 let schemaProvider: DatabaseTreeProvider
 let schemaContentProvider: SchemaContentProvider
 let completionProvider: CompletionProvider
 let jvmcode: vscode.Extension<any>
 let httpPort: number
 let docCount = 0
+let resultSetPanels: ResultSetWebview[] = []
+
 const ADD_DRIVER_CHOICE = '+ Add Driver'
 const ADD_CONNECTION_CHOICE = '+ Add Connection'
 const CLOSE_CHOICE = '+ Close'
@@ -67,8 +68,6 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     function registerProviders() {
-        resultProvider = new ResultSetContentProvider(context)
-        vscode.workspace.registerTextDocumentContentProvider(resultProvider.scheme, resultProvider)
         completionProvider = new CompletionProvider()
         vscode.languages.registerCompletionItemProvider('sql', completionProvider)
         schemaContentProvider = new SchemaContentProvider(context)
@@ -134,6 +133,11 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     function doConnect(connection: object, driver: object) {
+        // Close any existing result sets (just in case)
+        resultSetPanels.forEach((panel) => {
+            panel.close()
+        })
+        resultSetPanels = []
         // Send connection info to server, it will create connection pool if it doesn't already exist
         vscode.window.withProgress({ location: ProgressLocation.Window, title: "Connect to DB" }, (progress) => {
             progress.report({ message: 'Connecting to ' + connection['name'] })
@@ -170,21 +174,15 @@ export function activate(context: vscode.ExtensionContext) {
             connection: currentConnection['name'] as string,
             sql: sql,
             columns: [],
-            rows: []
+            rows: [],
+            status: 'executing'
         }
         /**
          * Open the query result UI and execute the query updating the UI with the results
          */
-        let uri = Uri.parse(resultProvider.scheme + '://' + queryId)
-        resultProvider.update(uri, sqlStatement)
-        let docName = currentConnection['name'] + '-' + (++docCount)
-        vscode.commands.executeCommand('vscode.previewHtml', uri, vscode.ViewColumn.One, docName).then((success) => {
-            jvmcode.exports.send('jdbcode.execute', sqlStatement).then((reply) => {
-                resultProvider.update(uri, reply.body)
-            }).catch((error) => {
-                vscode.window.showErrorMessage('Error executing SQL: ' + error.message)
-            })
-        })
+        let panel = new ResultSetWebview(context, jvmcode)
+        panel.create(sqlStatement, ++docCount)
+        resultSetPanels.push(panel)
     });
 
     /**
@@ -193,7 +191,8 @@ export function activate(context: vscode.ExtensionContext) {
     let disconnect = vscode.commands.registerCommand("jdbcode.disconnect", () => {
         schemas = []
         schemaObjects = null
-        resultProvider.clearResults()
+        resultSetPanels.forEach(panel => { panel.close() })
+        resultSetPanels = []
         schemaProvider.clearSchemas()
         statusBarItem.text = '$(database)'
         if (!currentConnection) return
@@ -208,92 +207,10 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     /**
-     * Re-execute the given query returning new results
+     * Refresh the database schema info for the current connection
      */
     let refresh = vscode.commands.registerCommand("jdbcode.refresh", (queryId) => {
-        let uri = Uri.parse(resultProvider.scheme + '://' + queryId)
-        resultProvider.update(uri, { id: queryId } as SqlStatement)
-        jvmcode.exports.send('jdbcode.refresh', { id: queryId }).then((reply) => {
-            resultProvider.update(uri, reply.body)
-        }).catch((error) => {
-            vscode.window.showErrorMessage('Error refreshing results: ' + error.message)
-        })
-    });
-
-    /**
-     * Cancel a currently running statement
-     */
-    let cancel = vscode.commands.registerCommand("jdbcode.cancel", (queryId) => {
-        let uri = Uri.parse(resultProvider.scheme + '://' + queryId)
-        resultProvider.update(uri, { id: queryId } as SqlStatement)
-        jvmcode.exports.send('jdbcode.cancel', { id: queryId }).then((reply) => {
-            resultProvider.update(uri, reply.body)
-        }).catch((error) => {
-            vscode.window.showErrorMessage('Error cancelling statement: ' + error.message)
-        })
-    });
-
-    /**
-     * Commit updates on this statement
-     */
-    let commit = vscode.commands.registerCommand("jdbcode.commit", (queryId) => {
-        let uri = Uri.parse(resultProvider.scheme + '://' + queryId)
-        resultProvider.update(uri, { id: queryId } as SqlStatement)
-        jvmcode.exports.send('jdbcode.commit', { id: queryId }).then((reply) => {
-            resultProvider.update(uri, reply.body)
-        }).catch((error) => {
-            vscode.window.showErrorMessage('Error committing transaction: ' + error.message)
-        })
-    });
-
-    /**
-     * Rollback updates on this statement
-     */
-    let rollback = vscode.commands.registerCommand("jdbcode.rollback", (queryId) => {
-        let uri = Uri.parse(resultProvider.scheme + '://' + queryId)
-        resultProvider.update(uri, { id: queryId } as SqlStatement)
-        jvmcode.exports.send('jdbcode.rollback', { id: queryId }).then((reply) => {
-            resultProvider.update(uri, reply.body)
-        }).catch((error) => {
-            vscode.window.showErrorMessage('Error rolling back transaction: ' + error.message)
-        })
-    });
-
-    /**
-     * Close this statement
-     */
-    let close = vscode.commands.registerCommand("jdbcode.close", (queryId) => {
-        let uri = Uri.parse(resultProvider.scheme + '://' + queryId)
-        resultProvider.close(uri)
-        jvmcode.exports.send('jdbcode.close', { id: queryId }).then((reply) => {
-        }).catch((error) => {
-            vscode.window.showErrorMessage('Error closing statement: ' + error.message)
-        })
-    });
-
-    /**
-     * Export the statement results to CSV and stick them in a buffer
-     */
-    let exportCsv = vscode.commands.registerCommand("jdbcode.export-csv", (queryId) => {
-        let resultSet = resultProvider.getResultSet(queryId)
-        if (!resultSet) {
-            vscode.window.showErrorMessage('No result set found for this query')
-            return
-        }
-        let columns = resultSet.sqlStatement.columns.map((col) => { return '"' + col + '"' }).join(',')
-        let rows = resultSet.sqlStatement.rows.map((row) => {
-            return row.map((value) => {
-                if (typeof value === 'number') return value
-                if (typeof value === 'boolean') return value
-                if (typeof value === 'undefined') return ''
-                if (typeof value === 'object') return ''
-                return '"' + value + '"'
-            }).join(',')
-        }).join('\n')
-        let csv = columns + '\n' + rows
-        vscode.workspace.openTextDocument({ language: 'csv', content: csv }).then((doc) => {
-            vscode.window.showTextDocument(doc)
-        })
+        // Todo
     });
 
     /**
@@ -338,11 +255,19 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         addDriver, addConnection, connect, execute, disconnect,
-        refresh, cancel, commit, rollback, close, exportCsv, statusBarItem,
-        describe, findObject
+        refresh, statusBarItem, describe, findObject
     );
 }
 
+export function doDescribe(dbObject: SchemaObject) : Promise<SchemaObject> {
+    return new Promise<SchemaObject>((resolve, reject) => {
+        jvmcode.exports.send('jdbcode.describe', { connection: currentConnection, dbObject: dbObject }).then((reply) => {
+            resolve(reply.body)
+        }).catch((error) => {
+            reject(error)
+        })
+    })
+}
 
 // this method is called when your extension is deactivated
 export function deactivate() {

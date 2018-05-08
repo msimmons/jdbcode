@@ -4,6 +4,8 @@ data class SqlStatement (
         var id: String = "",
         var connection: String = "",
         var sql: String = "",
+        var status: StatementStatus = StatementStatus.executing,
+        var type: StatementType = StatementType.query,
         var updateCount: Int = -1,
         var moreRows: Boolean = false,
         var executionCount: Int = 0,

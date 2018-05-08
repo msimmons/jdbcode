@@ -3,6 +3,8 @@ package net.contrapt.jdbcode.service
 import io.vertx.core.logging.LoggerFactory
 import net.contrapt.jdbcode.model.ConnectionData
 import net.contrapt.jdbcode.model.SqlStatement
+import net.contrapt.jdbcode.model.StatementStatus
+import net.contrapt.jdbcode.model.StatementType
 import java.io.InputStream
 import java.io.Reader
 import java.lang.Exception
@@ -44,7 +46,12 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
         sqlStatement.executionTime += measureTimeMillis {
             statement.execute()
         }
+        sqlStatement.status = StatementStatus.executed
         sqlStatement.updateCount = statement.updateCount
+        sqlStatement.type = when (sqlStatement.updateCount) {
+            -1 -> StatementType.query
+            else -> StatementType.crud
+        }
         results = statement.resultSet
         // Commit for selects to release any locks
         if ( sqlStatement.updateCount <= 0 ) connection.commit()
@@ -92,6 +99,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
             logger.warn("$javaClass.cancel(): $e")
         }
         results = null
+        sqlStatement.status = StatementStatus.cancelled
         return sqlStatement
     }
 
@@ -103,6 +111,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
             sqlStatement.updateCount=-1
             connection.commit()
         }
+        sqlStatement.status = StatementStatus.committed
         return sqlStatement
     }
 
@@ -114,6 +123,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
             sqlStatement.updateCount=-1
             connection.rollback()
         }
+        sqlStatement.status = StatementStatus.rolledback
         return sqlStatement
     }
 
