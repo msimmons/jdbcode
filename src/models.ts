@@ -9,6 +9,7 @@ export class SqlStatement {
     id: string
     connection: string
     sql: string
+    status: string
 }
 
 export interface ObjectDescription {

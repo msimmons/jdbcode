@@ -24,6 +24,9 @@ open class ConnectionService {
             isTestOnBorrow = true
             driverClassName = driver.driverClass
             initialSize = 1
+            maxActive = 50
+            maxIdle = 5
+            minIdle = 1
         }
         val dataSource = DataSource(config)
         configs.put(connection.name, connection)
@@ -63,7 +66,7 @@ open class ConnectionService {
         return statement.fetch()
     }
 
-    open fun refresh(id: String) : SqlStatement {
+    open fun reexecute(id: String) : SqlStatement {
         val statement = statements[id] ?: throw IllegalArgumentException("Unknown statement id $id")
         statement.execute()
         return statement.fetch()

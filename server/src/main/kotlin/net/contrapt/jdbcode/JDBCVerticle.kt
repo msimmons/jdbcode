@@ -39,7 +39,7 @@ class JDBCVerticle() : AbstractVerticle() {
                     logger.error("Opening a connection", e)
                     future.fail(e)
                 }
-            }, Handler<AsyncResult<JsonObject>> { ar ->
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) {
                     logger.error("Connect failed", ar.cause())
                     message.fail(1, ar.cause().toString())
@@ -62,26 +62,26 @@ class JDBCVerticle() : AbstractVerticle() {
                     sqlStatement.error = e.toString()
                     future.complete(JsonObject.mapFrom(sqlStatement))
                 }
-            }, Handler<AsyncResult<JsonObject>> { ar ->
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
         })
 
         /**
-         * Re-execute (refresh) the given SQL statement
+         * Re-execute (reexecute) the given SQL statement
          */
-        vertx.eventBus().consumer<JsonObject>("jdbcode.refresh", { message ->
+        vertx.eventBus().consumer<JsonObject>("jdbcode.reexecute", { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 try {
                     val id = message.body().getString("id")
-                    val result = connectionService.refresh(id)
+                    val result = connectionService.reexecute(id)
                     future.complete(JsonObject.mapFrom(result))
                 } catch (e: Exception) {
                     logger.error("Refreshing sql statement", e)
                     future.fail(e)
                 }
-            }, Handler<AsyncResult<JsonObject>> { ar ->
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
@@ -100,7 +100,7 @@ class JDBCVerticle() : AbstractVerticle() {
                     logger.error("Cancelling sql statement", e)
                     future.fail(e)
                 }
-            }, Handler<AsyncResult<JsonObject>> { ar ->
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
@@ -119,7 +119,7 @@ class JDBCVerticle() : AbstractVerticle() {
                     logger.error("Committing sql statement", e)
                     future.fail(e)
                 }
-            }, Handler<AsyncResult<JsonObject>> { ar ->
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
@@ -138,7 +138,7 @@ class JDBCVerticle() : AbstractVerticle() {
                     logger.error("Rolling back sql statement", e)
                     future.fail(e)
                 }
-            }, Handler<AsyncResult<JsonObject>> { ar ->
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
@@ -157,7 +157,7 @@ class JDBCVerticle() : AbstractVerticle() {
                     logger.error("Closing sql statement", e)
                     future.fail(e)
                 }
-            }, Handler<AsyncResult<JsonObject>> { ar ->
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
@@ -175,7 +175,7 @@ class JDBCVerticle() : AbstractVerticle() {
                 } catch (e: Exception) {
                     future.fail(e)
                 }
-            }, Handler<AsyncResult<JsonObject>> { ar ->
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
@@ -197,7 +197,7 @@ class JDBCVerticle() : AbstractVerticle() {
                     schemaData.error = e.toString()
                     future.complete(JsonObject.mapFrom(schemaData))
                 }
-            }, Handler<AsyncResult<JsonObject>> { ar ->
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
@@ -217,7 +217,7 @@ class JDBCVerticle() : AbstractVerticle() {
                     logger.error("getting objects", e)
                     future.fail(e)
                 }
-            }, Handler<AsyncResult<JsonObject>> { ar ->
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
