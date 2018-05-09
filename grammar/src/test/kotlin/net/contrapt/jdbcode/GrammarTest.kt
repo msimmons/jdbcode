@@ -2,6 +2,7 @@ package net.contrapt.jdbcode
 
 import org.antlr.v4.runtime.ANTLRInputStream
 import org.antlr.v4.runtime.CommonTokenStream
+import org.antlr.v4.runtime.ParserRuleContext
 import org.junit.Test
 
 open class GrammarTest {
@@ -17,8 +18,8 @@ open class GrammarTest {
 
     @Test
     fun testTest() {
-        //val sql = "select * from x.a as a where x=y order by z"
-        val sql = "select col from t, \n(select foo from bar b) a, mx.b"
+        val sql = "select * from x.table as a where x=y order by z"
+        //val sql = "select col from t, \n(select foo from bar b) a, mx.b"
         val input = ANTLRInputStream(sql)
         val lexer = SqlJLexer(input)
         val tokens = CommonTokenStream(lexer)
@@ -31,20 +32,32 @@ open class GrammarTest {
         println(listener.locationToType)
     }
 
-   /**
-    * (object,alias) in statement
-    * (line, character) -> obje
-    */
+    /**
+     * (object,alias) in statement
+     * (line, character) -> obje
+     */
     class MyParseListener : SqlJBaseListener() {
 
-       /** The map of alias to table of objects that appear in this statement */
-       val aliasToTable = mutableMapOf<String, String>()
+        /** The map of alias to table of objects that appear in this statement */
+        val aliasToTable = mutableMapOf<String, String>()
 
-       /** Map of location to type of thing expected */
-       val locationToType = mutableMapOf<Pair<Int,Int>, String>()
+        /** Map of location to type of thing expected */
+        val locationToType = mutableMapOf<Triple<Int, Int, Int>, String>()
+
+        private fun recordTypeLocation(ctx: ParserRuleContext, type: String) {
+            locationToType[Triple(ctx.start.line, ctx.start.startIndex, ctx.start.stopIndex)] = type
+        }
+
+        override fun enterTable_list(ctx: SqlJParser.Table_listContext) {
+            recordTypeLocation(ctx, "table_list")
+        }
+
+        override fun enterColumn_list(ctx: SqlJParser.Column_listContext) {
+            recordTypeLocation(ctx, "column_list")
+        }
 
         override fun enterTable_expression(ctx: SqlJParser.Table_expressionContext) {
-            locationToType.put(Pair(ctx.start.line, ctx.start.charPositionInLine), "table")
+            recordTypeLocation(ctx, "table")
         }
 
         override fun exitTable_expression(ctx: SqlJParser.Table_expressionContext) {
@@ -56,7 +69,7 @@ open class GrammarTest {
         }
 
         override fun enterColumn_name(ctx: SqlJParser.Column_nameContext) {
-            locationToType.put(Pair(ctx.start.line, ctx.start.charPositionInLine), "column")
+            recordTypeLocation(ctx, "column")
         }
     }
 

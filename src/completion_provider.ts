@@ -1,7 +1,9 @@
 import * as vscode from 'vscode'
 import { CompletionItemKind } from 'vscode';
-import { SchemaData } from './models'
+import { SchemaData, SchemaObject } from './models'
 import { SqlParser } from './sql_parser'
+import { ObjectSpec } from './sql_listener'
+import { doDescribe } from './extension'
 
 export class CompletionProvider implements vscode.CompletionItemProvider {
 
@@ -12,18 +14,26 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         new vscode.CompletionItem('delete', vscode.CompletionItemKind.Keyword)
     ]
 
-    private objects: vscode.CompletionItem[] = []
+    private schemaData: SchemaData[]
+    private schemaItems: vscode.CompletionItem[] = []
+    private tableItems: vscode.CompletionItem[] = []
+    private jvmcode: vscode.Extension<any> = vscode.extensions.getExtension('contrapt.jvmcode')
 
     setSchemas(schemas: SchemaData[]) {
+        this.schemaData = schemas
         let result = []
         schemas.forEach((schema) => {
+            this.schemaItems.push(new vscode.CompletionItem(schema.name, CompletionItemKind.Module))
             schema.object_types.forEach((type) => {
-                result = result.concat(type.objects.map((obj) => {
-                    return new vscode.CompletionItem(obj.owner+'.'+obj.name, CompletionItemKind.Class)
+                result = result.concat(type.objects.forEach((obj) => {
+                    let item = new vscode.CompletionItem(obj.name, CompletionItemKind.Class)
+                    item.detail = obj.owner
+                    if ( type.name === 'table' ) {
+                        this.tableItems.push(item)
+                    }
                 }))
             })
         })
-        this.objects = result
     }
 
     setKeywords(keywords: string[]) {
@@ -44,9 +54,28 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         let result = parser.parse(sql, position)
         console.log(result)
         // Find the type of thing needed at position
-        let item = new vscode.CompletionItem(result['type']+' '+result['of'], CompletionItemKind.Class)
-        return this.keywords.concat([item])
+        if ( result.type === 'owner' ) return this.schemaItems
+        if ( result.type === 'table_list' ) return this.schemaItems.concat(this.tableItems)
+        if ( result.type === 'table' ) return this.tableItems
+        if ( result.type === 'alias' ) return result.values.map((value) => { return new vscode.CompletionItem(value, vscode.CompletionItemKind.Field)})
+        if ( result.type === 'column_list' ) return result.values.map((value) => { return new vscode.CompletionItem(value, vscode.CompletionItemKind.Field)})
+        if ( result.type === 'column' ) return this.getColumnItems(result)
     }
 
+    private getColumnItems(spec: ObjectSpec) : Promise<vscode.CompletionItem[]> {
+        let obj = new SchemaObject()
+        obj.owner = spec.owner
+        obj.name = spec.name
+        obj.type = 'table'
+        let described = doDescribe(obj)
+        return new Promise<vscode.CompletionItem[]>((resolve, reject) => {
+            described.then((reply) => {
+                resolve(reply.columns.map((column) =>{ return new vscode.CompletionItem(column, vscode.CompletionItemKind.Field)}))
+            }).catch((error) => {
+                console.log(error.message)
+                resolve([])
+            })
+        })
+    }
     
 }

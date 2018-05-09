@@ -8,6 +8,7 @@ export class ObjectSpec {
     type: string
     owner: string
     name: string
+    values: string[]
 }
 
 export class ListenerFactory {
@@ -21,22 +22,21 @@ export class ListenerFactory {
         return new SqlListener(caret, this.caretObject, this.tableMap)
     }
 
-    getResult() : object {
-        let result
+    getResult() : ObjectSpec {
         switch ( this.caretObject.type ) {
             case 'column':
-                result = {type: 'column', of: this.tableMap[this.caretObject.owner].table}
+                let tableEntry = this.tableMap[this.caretObject.owner]
+                this.caretObject.owner = (tableEntry) ? tableEntry.table : ""
                 break
             case 'table':
-                result = {type: 'table', of: this.caretObject.owner}
-                break
             case 'owner':
-                result = {type: 'owner'}
                 break
             case 'alias':
-                result = {type: 'alias', of: this.tableMap.keys()}
+            case 'column_list':
+                this.tableMap.forEach((value, key) =>{ this.caretObject.values.push(key.toString())})
+                break
         }
-        return result
+        return this.caretObject
     }
 }
 
@@ -56,6 +56,10 @@ SqlListener.prototype.exitTable_expression = function(ctx) {
     let alias_name
     let table_name
     let owner_name
+    if ( !ctx.children ) {
+        if ( this.isCaretInChild(ctx) ) this.caretObject.type = 'table_list'
+        return
+    }
     ctx.children.forEach((child) => {
         if ( child instanceof SqlJSParser.Fq_table_nameContext ) fq_table_name = child
         if ( child instanceof SqlJSParser.Alias_nameContext ) alias_name = child.start.text
@@ -76,6 +80,10 @@ SqlListener.prototype.exitFq_table_name = function(ctx) {
     let table_name
     let owner_name
     let type
+    if ( !ctx.children ) {
+        if ( this.isCaretInChild(ctx) ) this.caretObject.type = 'table'
+        return
+    }
     ctx.children.forEach((child) => {
         if ( child instanceof SqlJSParser.Table_nameContext ) {
             table_name = child.start.text
@@ -98,6 +106,10 @@ SqlListener.prototype.exitColumn_expr = function(ctx) {
     let column_name
     let column_alias
     let type
+    if ( !ctx.children ) {
+        if ( this.isCaretInChild(ctx) ) this.caretObject.type = 'column_list'
+        return
+    }
     ctx.children.forEach((child) => {
         if ( child instanceof SqlJSParser.Column_nameContext ) {
             column_name = child.start.text

@@ -101,7 +101,7 @@ column_expr
  ;
 
 where_clause
- :
+ : column_expr+
  ;
 
 set_clause
