@@ -2,7 +2,7 @@ var vm = new Vue({
     el: '#app',
     template: `
     <div class="container-fluid" >
-    <table class="results table-hover table-condensed table-bordered">
+    <table class="table table-hover table-sm table-bordered table-striped">
         <thead>
             <th nowrap class="results">name</th>
             <th nowrap class="results">type</th>
@@ -11,7 +11,6 @@ var vm = new Vue({
             <th nowrap class="results">null?</th>
             <th nowrap class="results">auto?</th>
             <th nowrap class="results">references</th>
-            <!--th id="idx" nowrap class="results" :colspan="dbObject.indices.length">indices</th-->
         </thead>
         <tbody>
             <tr v-for="column in dbObject.columns">
@@ -25,11 +24,9 @@ var vm = new Vue({
                 <td nowrap class="results">{{column.nullable}}</td>
                 <td nowrap class="results">{{column.autoincrement}}</td>
                 <td nowrap class="results">{{column.references}}</td>
-                    <!td width="30" nowrap class="results" v-if="column.keySequence" class="fa fa-key"></td-->
-                    <td width="30" nowrap class="result" v-for="index in column.indices" :title="indexTitle(index)">
-                      <i :class="indexClass(index)">{{index.position}}</i>
-                    </td>
-                    <!--span v-for="index in column.indices" :class="indexClass(index)" :title="indexTitle(index)">{{index.position}}</span-->
+                <td width="30" nowrap class="result" v-for="index in column.indices" :title="indexTitle(index)">
+                    <i :class="indexClass(index)">{{index.position}}</i>
+                </td>
             </tr>
         </tbody>
     </table>
