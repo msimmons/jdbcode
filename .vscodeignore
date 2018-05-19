@@ -8,3 +8,10 @@ src/**
 tsconfig.json
 vsc-extension-quickstart.md
 *.vsix
+server/**
+gradle/**
+.gradle/**
+**gradle**
+*.iml
+.idea/**
+grammar/**
