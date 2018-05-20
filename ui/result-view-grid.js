@@ -1,49 +1,54 @@
-var grid;
-var options = {
+var grid
+const options = {
     enableCellNavigation: true,
     enableColumnReorder: false,
     enableTextSelectionOnCells: true,
     syncColumnCellResize: true
-};
+}
 var vm = new Vue({
     el: '#result-control',
     template: `
     <div class="container-fluid">
     <div v-if="hasError">
-      <b-alert show variant="danger">{{sqlStatement.error}}</b-alert>
+      <div class="alert alert-danger" role="alert">{{sqlStatement.error}}</div>
       <pre>{{sqlStatement.sql}}</pre>
     </div>
     <div class="row" v-if="!hasError">
       <div class="col" v-if="isQuery && !busy">
-        <div class="badge">Executions: {{sqlStatement.executionCount}}</div>
-        <div class="badge">Elapsed: {{sqlStatement.executionTime}}ms</div>
-        <div class="badge">Rows: {{totalRows}}</div>
-        <div class="badge">More?: {{sqlStatement.moreRows}}</div>
+        <span class="badge badge-light">Executions &nbsp;<span class="badge badge-secondary">{{sqlStatement.executionCount}}</span></span>
+        <span class="badge badge-light">Elapsed &nbsp;<span class="badge badge-secondary">{{sqlStatement.executionTime}}</span></span>
+        <span class="badge badge-light">Rows &nbsp;<span class="badge badge-secondary">{{totalRows}}</span></span>
+        <span class="badge badge-light">More &nbsp;<span class="badge badge-secondary">{{sqlStatement.moreRows}}</span></span>
       </div>
       <div class="col" v-if="!isQuery && !busy">
-        <div class="badge">Elapsed: {{sqlStatement.executionTime}}ms</div>
-        <div class="badge">Rows Affected: {{sqlStatement.updateCount}}</div>
-        <div class="badge">Status: {{sqlStatement.status}}</div>
+        <span class="badge badge-light">Elapsed &nbsp;<span class="badge badge-secondary">{{sqlStatement.executionTime}}</span></span>
+        <span class="badge badge-light">Rows Affected &nbsp;<span class="badge badge-secondary">{{sqlStatement.updateCount}}</span></span>
+        <span class="badge badge-light">Status &nbsp;<span class="badge badge-secondary">{{sqlStatement.status}}</span></span>
         <pre>{{sqlStatement.sql}}</pre>
       </div>
       <div class="col" v-if="busy">
         <span class="fa fa-spinner fa-pulse fa-3x fa-fw"></span>
-        <div class="badge">Executing</div>
+        <span class="badge">Executing</span>
         <pre>{{sqlStatement.sql}}</pre>
       </div>
-      <div class="button-group col">
-        <b-btn :disabled="busy" class="btn-sm btn-success fa fa-refresh" title="Refresh" @click="execute('reexecute')"/>
-        <b-btn :disabled="!busy" class="btn-sm btn-danger fa fa-stop" title="Cancel" @click="execute('cancel')"/>
-        <b-btn :disabled="!isTxn" class="btn-sm btn-success fa fa-check" title="Commit" @click="execute('commit')"/>
-        <b-btn :disabled="!isTxn" class="btn-sm btn-warning fa fa-undo" title="Rollback" @click="execute('rollback')"/>
-        <b-btn :disabled="!totalRows" class="btn-sm btn-success fa fa-download" title="Export" @click="execute('export')"/>
-        <b-btn class="btn-sm btn-danger fa fa-close" title="Close" @click="execute('close')"/>
+      <div class="col">
+        <div class="btn-group" role="group">
+          <button :disabled="busy" class="btn btn-success btn-sm fa fa-refresh" title="Refresh" @click="execute('reexecute')"/>
+          <button :disabled="!busy" class="btn btn-danger btn-sm fa fa-stop" title="Cancel" @click="execute('cancel')"/>
+        </div>
+        <div class="btn-group" role="group">
+          <button :disabled="!isTxn" class="btn btn-success btn-sm fa fa-check" title="Commit" @click="execute('commit')"/>
+          <button :disabled="!isTxn" class="btn btn-warning btn-sm fa fa-undo" title="Rollback" @click="execute('rollback')"/>
+        </div>
+        <button :disabled="!totalRows" class="btn btn-success btn-sm fa fa-download" title="Export" @click="execute('export')"/>
+        <button class="btn btn-danger btn-sm fa fa-close" title="Close" @click="execute('close')"/>
       </div>
       <div class="col">
-        <input type="text" placeholder="Filter..." style="width:100%;"/>
+        <input class="form-control form-control-sm" type="text" placeholder="Filter..." style="width:100%;"/>
       </div>
       </div>
       <div id="result-grid" />
+      </div>
 `,
     data: function () {
         return {
@@ -66,8 +71,12 @@ var vm = new Vue({
     methods: {
         update: function (event) {
             this.sqlStatement = event.data
-            if (this.sqlStatement.columns) {
-                this.createGrid()
+            if (this.sqlStatement.columns.length > 0) {
+                if (!grid) {
+                    this.createGrid()
+                } else {
+                    this.updateGrid()
+                }
             }
         },
         execute: function (command) {
@@ -91,6 +100,17 @@ var vm = new Vue({
             var height = window.innerHeight - 50
             $('#result-grid').css({ 'width': width + 'px', 'height': height + 'px' })
             grid = new Slick.Grid("#result-grid", data, columns, options);
+        },
+        updateGrid: function () {
+            var data = this.sqlStatement.rows.map((row) => {
+                var rowObject = {};
+                this.sqlStatement.columns.forEach((column, ndx) => {
+                    rowObject[column] = row[ndx];
+                })
+                return rowObject;
+            })
+            grid.setData(data)
+            grid.render()
         }
     },
     created: function () {

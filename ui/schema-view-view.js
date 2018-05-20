@@ -2,7 +2,7 @@ var vm = new Vue({
     el: '#app',
     template: `
     <div class="container-fluid" >
-    <table class="results table-hover table-condensed table-bordered">
+    <table class="table tabel-sm table-hover table-bordered table-striped">
         <thead>
             <th nowrap class="results">name</th>
             <th nowrap class="results">type</th>
