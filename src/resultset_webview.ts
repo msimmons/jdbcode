@@ -168,7 +168,6 @@ export class ResultSetWebview {
             <meta charset="UTF-8">
             <title>Result View</title>
             <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/bootstrap.min.css')}" />
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/bootstrap-vue.css')}" />
             <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/font-awesome.min.css')}" />
             <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/slick.grid.css')}" />
             <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/jquery-ui.custom.min.css')}" />
@@ -178,15 +177,9 @@ export class ResultSetWebview {
             <script src="${this.getScriptUri('dist/js/slick.core.js')}"></script>
             <script src="${this.getScriptUri('dist/js/slick.grid.js')}"></script>
             <script src="${this.getScriptUri('dist/js/vue.min.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/polyfill.min.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/bootstrap-vue.js')}"></script>
-            <script>
-                window['sql-statement'] = ${JSON.stringify(sqlStatement)}
-            </script>
         </head>
         <body>
             <div id="result-control"/>
-            <div id="result-grid"/>
             <script src="${this.getScriptUri('result-view-grid.js')}"></script>
         </body>
         </html>

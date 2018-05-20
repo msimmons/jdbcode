@@ -89,12 +89,9 @@ export class SchemaContentProvider implements vscode.TextDocumentContentProvider
             <meta charset="UTF-8">
             <title>Result View</title>
             <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/bootstrap.min.css')}" />
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/bootstrap-vue.css')}" />
             <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/font-awesome.min.css')}" />
             <link type="text/css" rel="stylesheet" href="${this.getScriptUri('main.css')}" />
             <script src="${this.getScriptUri('dist/js/vue.min.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/polyfill.min.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/bootstrap-vue.js')}"></script>
             <script>
                 window['db-object'] = ${JSON.stringify(dbObject)}
             </script>

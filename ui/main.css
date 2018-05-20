@@ -1,47 +1,5 @@
 .fa { font-size: 12px; }
 
-table.results {
-    border-collapse: collapse;
-    border: 0px;
-    display: block;
-    height: 90vh;
-    overflow-x: scroll;
-}
-
-thead.results {
-    display: table-column-group;
-    position: fixed;
-}
-
-tbody.results {
-    overflow-y: scroll;
-    height: 80vh;
-}
-
-th.results {
-    border:2px solid black;
-    padding: 2;
-    margin: 4px;
-    resize: horizontal;
-    overflow: hidden;
-    font-family: 'Droid Sans Mono', monospace, 'Droid Sans Fallback';
-    font-size: 14px;
-    height: 30px;
-    text-align: center;
-    background: lightgoldenrodyellow;
-}
-
-td.results {
-    border: 1px solid black;
-    padding: 0;
-    margin: 0px;
-    max-height: 20px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-family: 'Droid Sans Mono', monospace, 'Droid Sans Fallback';
-    font-size: 12px;
-}
-
 .result-grid-header {
     font-family: 'Droid Sans Mono', monospace, 'Droid Sans Fallback';
     font-weight: bold;
@@ -51,6 +9,16 @@ td.results {
 }
 
 .result-grid-row {
+    font-family: 'Droid Sans Mono', monospace, 'Droid Sans Fallback';
+    font-size: 14px;
+}
+
+.results th {
+    font-family: 'Droid Sans Mono', monospace, 'Droid Sans Fallback';
+    font-size: 16px;
+}
+
+.results td {
     font-family: 'Droid Sans Mono', monospace, 'Droid Sans Fallback';
     font-size: 14px;
 }
