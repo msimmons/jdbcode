@@ -1,10 +1,10 @@
-var grid;
-var options = {
+var grid
+const options = {
     enableCellNavigation: true,
     enableColumnReorder: false,
     enableTextSelectionOnCells: true,
     syncColumnCellResize: true
-};
+}
 var vm = new Vue({
     el: '#result-control',
     template: `
@@ -71,8 +71,12 @@ var vm = new Vue({
     methods: {
         update: function (event) {
             this.sqlStatement = event.data
-            if (this.sqlStatement.columns) {
-                this.createGrid()
+            if (this.sqlStatement.columns.length > 0) {
+                if (!grid) {
+                    this.createGrid()
+                } else {
+                    this.updateGrid()
+                }
             }
         },
         execute: function (command) {
@@ -96,6 +100,17 @@ var vm = new Vue({
             var height = window.innerHeight - 50
             $('#result-grid').css({ 'width': width + 'px', 'height': height + 'px' })
             grid = new Slick.Grid("#result-grid", data, columns, options);
+        },
+        updateGrid: function () {
+            var data = this.sqlStatement.rows.map((row) => {
+                var rowObject = {};
+                this.sqlStatement.columns.forEach((column, ndx) => {
+                    rowObject[column] = row[ndx];
+                })
+                return rowObject;
+            })
+            grid.setData(data)
+            grid.render()
         }
     },
     created: function () {
