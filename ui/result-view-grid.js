@@ -112,6 +112,10 @@ var vm = new Vue({
             })
             grid.setData(data)
             grid.render()
+        },
+        clearGrid: function () {
+            grid.setData([])
+            grid.render()
         }
     },
     created: function () {
