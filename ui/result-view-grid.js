@@ -87,29 +87,27 @@ var vm = new Vue({
             this.vscode.postMessage({command: command, id: this.sqlStatement.id})
         },
         createGrid: function () {
-            var columns = this.sqlStatement.columns.map((column) => {
-                return { id: column, name: column, field: column, headerCssClass: 'result-grid-header', cssClass: 'result-grid-row' }
+            this.columns = this.sqlStatement.columns.map((column, ndx) => {
+                console.log(column + ndx)
+                return { id: `${ndx}`, name: column, field: `${ndx}`, headerCssClass: 'result-grid-header', cssClass: 'result-grid-row' }
             });
-            var data = this.sqlStatement.rows.map((row) => {
-                var rowObject = {};
-                columns.forEach((column, ndx) => {
-                    rowObject[column.name] = row[ndx];
-                })
-                return rowObject;
-            })
+            var data = this.getData()
             var width = window.innerWidth - 75
             var height = window.innerHeight - 50
             $('#result-grid').css({ 'width': width + 'px', 'height': height + 'px' })
-            grid = new Slick.Grid("#result-grid", data, columns, options);
+            grid = new Slick.Grid("#result-grid", data, this.columns, options);
         },
-        updateGrid: function () {
-            var data = this.sqlStatement.rows.map((row) => {
+        getData: function () {
+            return this.sqlStatement.rows.map((row) => {
                 var rowObject = {};
-                this.sqlStatement.columns.forEach((column, ndx) => {
-                    rowObject[column] = row[ndx];
+                this.columns.forEach((column, ndx) => {
+                    rowObject[column.field] = row[ndx];
                 })
                 return rowObject;
             })
+        },
+        updateGrid: function () {
+            var data = this.getData()
             grid.setData(data)
             grid.render()
         },
