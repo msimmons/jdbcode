@@ -23,7 +23,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
     private val statement: PreparedStatement
 
     private var results: ResultSet? = null
-    private var columns: MutableSet<String> = mutableSetOf()
+    private var columns: MutableList<String> = mutableListOf()
     private var rows: MutableList<MutableList<Any?>> = mutableListOf()
 
     private var isLimited = true
@@ -65,10 +65,11 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
         if (results == null) return sqlStatement
         // Get the column names
         val columnCount = results?.metaData?.columnCount ?: 0
+        columns.clear()
         (1..columnCount).forEach {
             columns.add(results?.metaData?.getColumnName(it) ?: "")
         }
-        sqlStatement.columns = columns.toList()
+        sqlStatement.columns = columns
         sqlStatement.rows = rows
         // Fetch rows
         sqlStatement.fetchTime = measureTimeMillis {

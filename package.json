@@ -62,7 +62,8 @@
     "menus": {
       "view/title": [
         {
-          "command": "jdbcode.refresh"
+          "command": "jdbcode.refresh",
+          "when": "view == 'jdbcode.schemaTree'"
         }
       ]
     },

@@ -91,6 +91,9 @@ export class ResultSetWebview {
     }
 
     private reexecute () {
+        // Clear the rows so we aren't sending them back to server
+        this.sqlStatement.rows = []
+        this.sqlStatement.columns = []
         this.jvmcode.exports.send('jdbcode.reexecute', this.sqlStatement).then((reply) => {
             this.update(reply.body)
         }).catch((error) => {

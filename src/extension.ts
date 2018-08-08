@@ -111,6 +111,15 @@ export function activate(context: vscode.ExtensionContext) {
      * Open a connection to the given database defined by connection and driver configs
      */
     let connect = vscode.commands.registerCommand("jdbcode.connect", () => {
+        doChoose()
+    });
+
+    /**
+     * Let the user choose a connection
+     * 
+     * @param command An optional command passed to doConnect and executed on successful connection
+     */
+    function doChoose(command?: string) {
         let config = vscode.workspace.getConfiguration("jdbcode")
         let connections = config.get('connections') as Array<object>
         let drivers = config.get('drivers') as Array<object>
@@ -127,12 +136,18 @@ export function activate(context: vscode.ExtensionContext) {
                 if (!connection) return;
                 let driver = drivers.find((it) => { return it['name'] === connection['driver'] })
                 if (!driver) vscode.window.showErrorMessage('Could not find driver for connection ' + choice)
-                doConnect(connection, driver)
+                doConnect(connection, driver, command)
             }
         })
-    });
+    }
 
-    function doConnect(connection: object, driver: object) {
+    /**
+     * Connect to database with the given config. optionally, execute the given command on success
+     * @param connection The connection config
+     * @param driver The driver config
+     * @param command optional command name to execute on connection success
+     */
+    function doConnect(connection: object, driver: object, command?: string) {
         // Close any existing result sets (just in case)
         resultSetPanels.forEach((panel) => {
             panel.close()
@@ -150,6 +165,9 @@ export function activate(context: vscode.ExtensionContext) {
                 currentConnection = connection
                 statusBarItem.text = '$(database) ' + currentConnection['name']
                 vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', true)
+                if (command) {
+                    vscode.commands.executeCommand(command)
+                }
             }).catch((error) => {
                 vscode.window.showErrorMessage('Error connecting: ' + error.message)
             })
@@ -157,7 +175,8 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     /**
-     * Execute the currently selected SQL statement on the current connection
+     * Execute the currently selected SQL statement on the current connection.  If no current
+     * connection is chosen, allow user to choose one.
      */
     let execute = vscode.commands.registerCommand("jdbcode.execute", () => {
         let editor = vscode.window.activeTextEditor
@@ -165,7 +184,7 @@ export function activate(context: vscode.ExtensionContext) {
         let sql = editor.document.getText(editor.selection)
         if (!sql) return
         if (!currentConnection) {
-            vscode.window.showWarningMessage('Choose a db connection first')
+            doChoose("jdbcode.execute")
             return
         }
         let queryId: string = makeUUID()
