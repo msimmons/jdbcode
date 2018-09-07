@@ -49,7 +49,10 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         // Find the beginning of the SQL statement (for now beginning of line)
         let start = new vscode.Position(position.line, 0)
         let sql = document.lineAt(position.line).text
+        document.getText()
+        console.log(position)
         // Parse from beginning to end (for now end of line)
+        /*
         let parser = new SqlParser()
         let result = parser.parse(sql, position)
         console.log(result)
@@ -60,6 +63,8 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         if ( result.type === 'alias' ) return result.values.map((value) => { return new vscode.CompletionItem(value, vscode.CompletionItemKind.Field)})
         if ( result.type === 'column_list' ) return result.values.map((value) => { return new vscode.CompletionItem(value, vscode.CompletionItemKind.Field)})
         if ( result.type === 'column' ) return this.getColumnItems(result)
+        */
+       return []
     }
 
     private getColumnItems(spec: ObjectSpec) : Promise<vscode.CompletionItem[]> {

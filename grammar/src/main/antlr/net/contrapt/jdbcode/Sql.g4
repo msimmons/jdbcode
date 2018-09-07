@@ -17,7 +17,7 @@ ddl_statement
  ;
 
 select_statement
- : K_SELECT (K_DISTINCT)? column_list
+ : K_SELECT (K_DISTINCT)? select_list
    (K_FROM table_list)?
    (K_WHERE where_clause)?
    (K_GROUP K_BY group_clause)?
@@ -33,17 +33,19 @@ compound_operator
  ;
 
 insert_statement
- : K_INSERT K_INTO fq_table_name
+ : K_INSERT K_INTO table_expr
+   insert_list?
+   values_list
  ;
 
 update_statement
- : K_UPDATE fq_table_name 
+ : K_UPDATE table_expr
    K_SET set_clause 
    (K_WHERE where_clause)?
  ;
 
 delete_statement
- : K_DELETE K_FROM fq_table_name 
+ : K_DELETE K_FROM table_expr 
    (K_WHERE where_clause)?
  ;
 
@@ -51,12 +53,12 @@ table_name
  : IDENTIFIER
  ;
 
-fq_table_name
+table_expr
  : ( owner_name '.' )? table_name
  ;
 
-table_expression
- : fq_table_name ( K_AS? alias_name )?
+table_item
+ : table_expr ( K_AS? alias_name )?
  | '(' select_statement ')' K_AS? alias_name
  ;
 
@@ -71,7 +73,7 @@ join_constraint
  ;
 
 table_list
- : table_expression ( ',' table_expression | join_operator table_expression join_constraint )*
+ : table_item ( ',' table_item | join_operator table_item join_constraint )*
  ;
 
 owner_name
@@ -84,28 +86,43 @@ alias_name
 
 column_name
  : IDENTIFIER
+ | '*'
  ;
 
-column_wildcard
- : '*'
+select_list
+ : select_item (',' select_item)*
  ;
 
-column_list
- : column_expr (',' column_expr)*
+select_item
+ : value_expr ( K_AS? column_alias)?
  ;
 
 column_expr
- : (alias_name '.')? column_wildcard
- | (alias_name '.')? column_name (K_AS? column_alias)?
- | expr ( K_AS? column_alias)?
+ : (alias_name '.')? column_name
+ ;
+
+value_expr
+ : literal_value
+ | column_expr
+ | unary_operator value_expr
+ | value_expr operator value_expr
  ;
 
 where_clause
- : column_expr+
+ : value_expr+
+ ;
+
+insert_list
+ : '(' column_expr (',' column_expr)* ')'
+ ;
+
+values_list
+ : K_VALUES '(' value_expr (',' value_expr)* ')'
+ | select_statement
  ;
 
 set_clause
- : column_name '=' expr (',' column_name '=' expr)*
+ : column_expr '=' value_expr (',' column_expr '=' value_expr)*
  ;
 
 order_direction
@@ -115,7 +132,7 @@ order_direction
 
 order_expr
  : NUMERIC_LITERAL order_direction?
- | (alias_name '.')? column_name order_direction?
+ | column_expr order_direction?
  ;
 
 order_clause
@@ -129,7 +146,7 @@ group_clause
 operator
  : '||'
  | ('*'|'/'|'%')
- | ('<'| '>'| '<='| '>='| '!='| '<>')
+ | ('=' | '<' | '>'| '<='| '>='| '!='| '<>')
  | (K_IS | K_IS K_NOT | K_IN | K_LIKE | K_AND | K_OR)
  ;
  
@@ -138,14 +155,6 @@ unary_operator
  | '+'
  | '~'
  | K_NOT
- ;
-
-value_expr
- : literal_value
- | unary_operator value_expr
- | value_expr operator value_expr
- | function_name '(' (value_expr (',' value_expr)*)? ')'
- | '(' value_expr ')'
  ;
 
 expr
