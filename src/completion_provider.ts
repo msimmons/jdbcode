@@ -17,7 +17,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
     private schemaData: SchemaData[]
     private schemaItems: vscode.CompletionItem[] = []
     private tableItems: vscode.CompletionItem[] = []
-    private jvmcode: vscode.Extension<any> = vscode.extensions.getExtension('contrapt.jvmcode')
+    private jvmcode: any = vscode.extensions.getExtension('contrapt.jvmcode').exports
 
     setSchemas(schemas: SchemaData[]) {
         this.schemaData = schemas
