@@ -71,22 +71,21 @@ export function activate(context: vscode.ExtensionContext) {
     let addDriver = vscode.commands.registerCommand('jdbcode.addDriver', () => {
         let config = vscode.workspace.getConfiguration("jdbcode")
         let drivers = config.get('drivers') as Array<object>
-        vscode.window.showInputBox({ placeHolder: 'A name for the driver' }).then((name) => {
-            if (!name) return
-            if (drivers.find((d) => { return d['name'] === name })) {
-                vscode.window.showErrorMessage('Driver ' + name + ' already exists')
-                return
-            }
-            vscode.window.showInputBox({ placeHolder: 'Path to jar file' }).then((jarFile) => {
-                if (!jarFile) return
+        vscode.window.showOpenDialog({filters: {'Driver Jar': ['jar']}, canSelectMany: false}).then((jarFile) => {
+            if (!jarFile || jarFile.length == 0) return
+            vscode.window.showInputBox({ placeHolder: 'A name for the driver' }).then((name) => {
+                if (!name) return
+                if (drivers.find((d) => { return d['name'] === name })) {
+                    vscode.window.showErrorMessage('Driver ' + name + ' already exists')
+                    return
+                }
                 vscode.window.showInputBox({ placeHolder: 'Driver class name' }).then((driverClass) => {
                     if (!driverClass) return
-                    drivers.push({ name: name, jarFile: jarFile, driverClass: driverClass })
+                    drivers.push({ name: name, jarFile: jarFile[0]['path'], driverClass: driverClass })
                     config.update('drivers', drivers, ConfigurationTarget.Global)
                 })
             })
         })
-
     })
 
     /**
