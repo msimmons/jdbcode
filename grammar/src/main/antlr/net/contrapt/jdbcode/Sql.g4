@@ -49,7 +49,29 @@ delete_statement
    (K_WHERE where_clause)?
  ;
 
+owner_name
+ : IDENTIFIER
+ ;
+
 table_name
+ : IDENTIFIER
+ ;
+
+alias_name
+ : IDENTIFIER
+ ;
+
+column_name
+ : IDENTIFIER
+ | '*'
+ ;
+
+column_alias
+ : IDENTIFIER
+ | STRING_LITERAL
+ ;
+
+function_name
  : IDENTIFIER
  ;
 
@@ -62,31 +84,17 @@ table_item
  | '(' select_statement ')' K_AS? alias_name
  ;
 
-join_operator
- : ','
- | K_NATURAL? ( K_LEFT K_OUTER? | K_INNER | K_CROSS )? K_JOIN
- ;
-
-join_constraint
- : ( K_ON expr
-   | K_USING '(' column_name ( ',' column_name )* ')' )?
- ;
-
 table_list
  : table_item ( ',' table_item | join_operator table_item join_constraint )*
  ;
 
-owner_name
- : IDENTIFIER
+join_operator
+ : K_NATURAL? ( K_LEFT K_OUTER? | K_INNER | K_CROSS )? K_JOIN
  ;
 
-alias_name
- : IDENTIFIER
- ;
-
-column_name
- : IDENTIFIER
- | '*'
+join_constraint
+ : ( K_ON value_expr
+   | K_USING '(' column_expr ( ',' column_expr )* ')' )?
  ;
 
 select_list
@@ -106,6 +114,9 @@ value_expr
  | column_expr
  | unary_operator value_expr
  | value_expr operator value_expr
+ | function_name '(' ( K_DISTINCT? value_expr ( ',' value_expr )* | '*' )? ')'
+ | '(' value_expr ')'
+ | K_CASE value_expr? ( K_WHEN value_expr K_THEN value_expr )+ ( K_ELSE value_expr )? K_END
  ;
 
 where_clause
@@ -157,55 +168,11 @@ unary_operator
  | K_NOT
  ;
 
-expr
- : literal_value
- | BIND_PARAMETER
- | ( ( database_name '.' )? table_name '.' )? column_name
- | unary_operator expr
- | expr '||' expr
- | expr ( '*' | '/' | '%' ) expr
- | expr ( '+' | '-' ) expr
- | expr ( '<<' | '>>' | '&' | '|' ) expr
- | expr ( '<' | '<=' | '>' | '>=' ) expr
- | expr ( '=' | '==' | '!=' | '<>' | K_IS | K_IS K_NOT | K_IN | K_LIKE | K_GLOB | K_MATCH | K_REGEXP ) expr
- | expr K_AND expr
- | expr K_OR expr
- | function_name '(' ( K_DISTINCT? expr ( ',' expr )* | '*' )? ')'
- | '(' expr ')'
-// | K_CAST '(' expr K_AS type_name ')'
- | expr K_COLLATE collation_name
- | expr K_NOT? ( K_LIKE | K_GLOB | K_REGEXP | K_MATCH ) expr ( K_ESCAPE expr )?
- | expr ( K_ISNULL | K_NOTNULL | K_NOT K_NULL )
- | expr K_IS K_NOT? expr
- | expr K_NOT? K_BETWEEN expr K_AND expr
- //| expr K_NOT? K_IN ( '(' ( select_stmt
- //                         | expr ( ',' expr )*
- //                         )? 
- //                     ')'
- //                   | ( database_name '.' )? table_name )
- //| ( ( K_NOT )? K_EXISTS )? '(' select_stmt ')'
- | K_CASE expr? ( K_WHEN expr K_THEN expr )+ ( K_ELSE expr )? K_END
- ;
-
-signed_number
- : ( '+' | '-' )? NUMERIC_LITERAL
- ;
-
 literal_value
  : NUMERIC_LITERAL
  | STRING_LITERAL
  | BLOB_LITERAL
  | K_NULL
- ;
-
-
-error_message
- : STRING_LITERAL
- ;
-
-column_alias
- : IDENTIFIER
- | STRING_LITERAL
  ;
 
 keyword
@@ -333,75 +300,6 @@ keyword
  | K_WHERE
  | K_WITH
  | K_WITHOUT
- ;
-
-// TODO check all names below
-
-name
- : any_name
- ;
-
-function_name
- : any_name
- ;
-
-database_name
- : any_name
- ;
-
-table_or_index_name 
- : any_name
- ;
-
-new_table_name 
- : any_name
- ;
-
-collation_name 
- : any_name
- ;
-
-foreign_table 
- : any_name
- ;
-
-index_name 
- : any_name
- ;
-
-trigger_name
- : any_name
- ;
-
-view_name 
- : any_name
- ;
-
-module_name 
- : any_name
- ;
-
-pragma_name 
- : any_name
- ;
-
-savepoint_name 
- : any_name
- ;
-
-table_alias 
- : any_name
- ;
-
-transaction_name
- : any_name
- ;
-
-any_name
- : IDENTIFIER 
- | keyword
- | STRING_LITERAL
- | '(' any_name ')'
  ;
 
 SCOL : ';';

@@ -7,22 +7,21 @@ import java.util.*
 
 class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
 
-    /** The map of alias to table of objects that appear in this statement */
-    val tableMap = mutableMapOf<String, Item>()
-
     /** A stack of scopes for mapping aliases to tables, handles sub-selects */
-    val tableScopes = Stack<MutableMap<String, Item>>()
+    val tableScopes = Stack<MutableMap<String, Item.TableItem>>()
 
     /** Set of items with locations */
     val itemLocations = mutableSetOf<Item>()
 
     fun parse(sql: String) {
-        val input = ANTLRInputStream(sql)//.substring(0..9))
+        val input = ANTLRInputStream(sql)
         val lexer = SqlJLexer(input)
         val tokens = CommonTokenStream(lexer)
         val parser = SqlJParser(tokens)
         parser.addErrorListener(this)
         parser.addParseListener(this)
+        tableScopes.clear()
+        itemLocations.clear()
         parser.statement()
     }
 
