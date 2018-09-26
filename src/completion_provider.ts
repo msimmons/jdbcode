@@ -28,7 +28,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
                 result = result.concat(type.objects.forEach((obj) => {
                     let item = new vscode.CompletionItem(obj.name, CompletionItemKind.Class)
                     item.detail = obj.owner
-                    if ( type.name === 'table' ) {
+                    if (type.name === 'table') {
                         this.tableItems.push(item)
                     }
                 }))
@@ -37,7 +37,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
     }
 
     setKeywords(keywords: string[]) {
-        let additionalKeywords = keywords.map((k) => { return new vscode.CompletionItem(k, CompletionItemKind.Keyword)})
+        let additionalKeywords = keywords.map((k) => { return new vscode.CompletionItem(k, CompletionItemKind.Keyword) })
         this.keywords = this.keywords.concat(additionalKeywords)
     }
 
@@ -46,41 +46,76 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
     }
 
     provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
-        // Find the beginning of the SQL statement (for now beginning of line)
-        let start = new vscode.Position(position.line, 0)
-        let sql = document.lineAt(position.line).text
-        document.getText()
-        console.log(position)
-        // Parse from beginning to end (for now end of line)
-        /*
-        let parser = new SqlParser()
-        let result = parser.parse(sql, position)
-        console.log(result)
-        // Find the type of thing needed at position
-        if ( result.type === 'owner' ) return this.schemaItems
-        if ( result.type === 'table_list' ) return this.schemaItems.concat(this.tableItems)
-        if ( result.type === 'table' ) return this.tableItems
-        if ( result.type === 'alias' ) return result.values.map((value) => { return new vscode.CompletionItem(value, vscode.CompletionItemKind.Field)})
-        if ( result.type === 'column_list' ) return result.values.map((value) => { return new vscode.CompletionItem(value, vscode.CompletionItemKind.Field)})
-        if ( result.type === 'column' ) return this.getColumnItems(result)
-        */
-       return []
+        let range = this.getSqlRange(position, document)
+        let sql = document.getText(range)
+        // Calculate the caret position's character offset relative to this block of SQL (0 based)
+        let caretOffset = document.offsetAt(position) - document.offsetAt(range.start)
+        return this.getCompletionItems(sql, caretOffset)
     }
 
-    private getColumnItems(spec: ObjectSpec) : Promise<vscode.CompletionItem[]> {
+    private async getCompletionItems(sql, caretOffset) {
+        let result = await this.jvmcode.send('jdbcode.parse', {sql: sql, char: caretOffset})
+        let item = result.body
+        switch (item.type) {
+            case 'column_expr':
+                return this.getColumnItems(item)
+            case 'table_list':
+                return this.schemaItems.concat(this.tableItems)
+            case 'table_item':
+                return this.schemaItems.concat(this.tableItems)
+            case 'syntax_error':
+                return item.expected.map((it) => {return new vscode.CompletionItem(it)})
+            default:
+                return this.keywords
+        }
+    }
+
+    private getSqlRange(position: vscode.Position, document: vscode.TextDocument) : vscode.Range {
+        // Search forwards for empty line or semicolon line ending
+        let endLine
+        for (endLine = position.line; endLine < document.lineCount; endLine++) {
+            if (!document.lineAt(endLine+1).text) break
+            if (document.lineAt(endLine).text.endsWith(';')) break
+        }
+        // Search backwards for empty line or semicolon
+        let startLine
+        for (startLine = position.line; startLine > 0; startLine--) {
+            if (!document.lineAt(startLine-1).text) break
+            if (document.lineAt(startLine-1).text.endsWith(';')) break
+        }
+        let start = new vscode.Position(startLine, 0)
+        let end = new vscode.Position(endLine, document.lineAt(endLine).text.length)
+        return new vscode.Range(start, end)
+    }
+
+    private getColumnItems(item: any): Promise<vscode.CompletionItem[]> {
         let obj = new SchemaObject()
-        obj.owner = spec.owner
-        obj.name = spec.name
+        let tableItem = {owner: '', name: ''}
+        if (!item.tableAlias) {
+            for (var key in item.tableMap) {
+                tableItem = item.tableMap[key]
+                break
+            }
+        } else {
+            tableItem = item.tableMap[item.tableAlias]
+        }
+        obj.owner = tableItem.owner
+        obj.name = tableItem.name
         obj.type = 'table'
         let described = doDescribe(obj)
         return new Promise<vscode.CompletionItem[]>((resolve, reject) => {
             described.then((reply) => {
-                resolve(reply.columns.map((column) =>{ return new vscode.CompletionItem(column, vscode.CompletionItemKind.Field)}))
+                let columnItems = reply.columns.map(column => {
+                    let ci = new vscode.CompletionItem(column.name, vscode.CompletionItemKind.Field)
+                    ci.detail = obj.name
+                    return ci
+                })
+                resolve(columnItems)
             }).catch((error) => {
                 console.log(error.message)
                 resolve([])
             })
         })
     }
-    
+
 }

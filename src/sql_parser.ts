@@ -16,7 +16,7 @@ export class SqlParser {
         let listener = this.factory.createListener(caret)
         let tree  = parser.statement()
         antlr4.tree.ParseTreeWalker.DEFAULT.walk(listener, tree)
-        return this.factory.getResult()
+        return tree
     }    
 
 }

@@ -10,11 +10,13 @@ import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
 import net.contrapt.jdbcode.model.*
 import net.contrapt.jdbcode.service.ConnectionService
+import net.contrapt.jdbcode.service.StatementParser
 
 class JDBCVerticle() : AbstractVerticle() {
 
     private val logger = LoggerFactory.getLogger(javaClass)
     var connectionService = ConnectionService()
+    val parseService = StatementParser()
 
     override fun start() {
 
@@ -27,7 +29,7 @@ class JDBCVerticle() : AbstractVerticle() {
          * Request to connect opens a connection pool and returns list of schemas/catalogs available to the
          * connection
          */
-        vertx.eventBus().consumer<JsonObject>("jdbcode.connect", { message ->
+        vertx.eventBus().consumer<JsonObject>("jdbcode.connect") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 var connection : ConnectionData
                 try {
@@ -45,12 +47,12 @@ class JDBCVerticle() : AbstractVerticle() {
                     message.fail(1, ar.cause().toString())
                 } else message.reply(ar.result())
             })
-        })
+        }
 
         /**
          * Execute the given SQL statement
          */
-        vertx.eventBus().consumer<JsonObject>("jdbcode.execute", { message ->
+        vertx.eventBus().consumer<JsonObject>("jdbcode.execute") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 var sqlStatement = SqlStatement()
                 try {
@@ -66,12 +68,12 @@ class JDBCVerticle() : AbstractVerticle() {
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
-        })
+        }
 
         /**
          * Re-execute (reexecute) the given SQL statement
          */
-        vertx.eventBus().consumer<JsonObject>("jdbcode.reexecute", { message ->
+        vertx.eventBus().consumer<JsonObject>("jdbcode.reexecute") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 try {
                     val id = message.body().getString("id")
@@ -85,12 +87,12 @@ class JDBCVerticle() : AbstractVerticle() {
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
-        })
+        }
 
         /**
          * Cancel the given SQL statement (if possible)
          */
-        vertx.eventBus().consumer<JsonObject>("jdbcode.cancel", { message ->
+        vertx.eventBus().consumer<JsonObject>("jdbcode.cancel") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 try {
                     val id = message.body().getString("id")
@@ -104,12 +106,12 @@ class JDBCVerticle() : AbstractVerticle() {
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
-        })
+        }
 
         /**
          * Commit the given SQL statement
          */
-        vertx.eventBus().consumer<JsonObject>("jdbcode.commit", { message ->
+        vertx.eventBus().consumer<JsonObject>("jdbcode.commit") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 try {
                     val id = message.body().getString("id")
@@ -123,12 +125,12 @@ class JDBCVerticle() : AbstractVerticle() {
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
-        })
+        }
 
         /**
          * Rollback the given SQL statement
          */
-        vertx.eventBus().consumer<JsonObject>("jdbcode.rollback", { message ->
+        vertx.eventBus().consumer<JsonObject>("jdbcode.rollback") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 try {
                     val id = message.body().getString("id")
@@ -142,12 +144,12 @@ class JDBCVerticle() : AbstractVerticle() {
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
-        })
+        }
 
         /**
          * Close the given SQL statement
          */
-        vertx.eventBus().consumer<JsonObject>("jdbcode.close", { message ->
+        vertx.eventBus().consumer<JsonObject>("jdbcode.close") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 try {
                     val id = message.body().getString("id")
@@ -161,12 +163,12 @@ class JDBCVerticle() : AbstractVerticle() {
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
-        })
+        }
 
         /**
          * Disconnect from the given connection -- closes all statements and the pool
          */
-        vertx.eventBus().consumer<JsonObject>("jdbcode.disconnect", { message ->
+        vertx.eventBus().consumer<JsonObject>("jdbcode.disconnect") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 try {
                     val connection = message.body().mapTo(ConnectionData::class.java)
@@ -179,12 +181,12 @@ class JDBCVerticle() : AbstractVerticle() {
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
-        })
+        }
 
         /**
          * Return objects belonging to the given schema/catalog
          */
-        vertx.eventBus().consumer<JsonObject>("jdbcode.objects", { message ->
+        vertx.eventBus().consumer<JsonObject>("jdbcode.objects") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 var schemaData = SchemaData()
                 try {
@@ -201,12 +203,12 @@ class JDBCVerticle() : AbstractVerticle() {
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
-        })
+        }
 
         /**
          * Describe the given object ( table, index columns; procedure params etc)
          */
-        vertx.eventBus().consumer<JsonObject>("jdbcode.describe", { message ->
+        vertx.eventBus().consumer<JsonObject>("jdbcode.describe") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 try {
                     val connectionData = message.body().getJsonObject("connection").mapTo(ConnectionData::class.java)
@@ -221,7 +223,27 @@ class JDBCVerticle() : AbstractVerticle() {
                 if (ar.failed()) message.fail(1, ar.cause().toString())
                 else message.reply(ar.result())
             })
-        })
+        }
+
+        /**
+         * Parse the given sql statement
+         */
+        vertx.eventBus().consumer<JsonObject>("jdbcode.parse") { message ->
+            vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
+                try {
+                    val sql = message.body().getString("sql")
+                    val char = message.body().getInteger("char")
+                    val item = parseService.parse(sql, char)
+                    future.complete(JsonObject.mapFrom(item))
+                } catch (e: Exception) {
+                    logger.error("parsing sql", e)
+                    future.fail(e)
+                }
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
+                if (ar.failed()) message.fail(1, ar.cause().toString())
+                else message.reply(ar.result())
+            })
+        }
 
     }
 }

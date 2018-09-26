@@ -13,6 +13,9 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
     /** Set of items with locations */
     val itemLocations = mutableSetOf<Item>()
 
+    /** Error item if applicable */
+    var syntaxError: Item? = null
+
     fun parse(sql: String) {
         val input = ANTLRInputStream(sql)
         val lexer = SqlJLexer(input)
@@ -22,6 +25,7 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
         parser.addParseListener(this)
         tableScopes.clear()
         itemLocations.clear()
+        syntaxError = null
         parser.statement()
     }
 
@@ -31,10 +35,10 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
         return TokenRange(start, stop, ctx.start.line, ctx.start.charPositionInLine)
     }
 
-    fun getCaretItem(line: Int, char: Int) : Item? {
+    fun getCaretItem(char: Int) : Item {
         return itemLocations.find {
-            it.range.line == line && it.range.start <= char && it.range.stop >= char
-        }
+            it.range.start <= char && it.range.stop >= char
+        } ?: syntaxError ?: Item.NullItem(TokenRange(0, 0, 0, char))
     }
 
     override fun enterStatement(ctx: SqlJParser.StatementContext) {
@@ -80,6 +84,8 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
     }
 
     override fun syntaxError(recognizer: Recognizer<*, *>?, offendingSymbol: Any?, line: Int, charPositionInLine: Int, msg: String?, e: RecognitionException?) {
+        val expected = msg?.split(",")?.toList() ?: emptyList()
+        syntaxError = Item.SyntaxError(TokenRange(0, 0, line, charPositionInLine), expected)
     }
 
     override fun reportAmbiguity(recognizer: Parser?, dfa: DFA?, startIndex: Int, stopIndex: Int, exact: Boolean, ambigAlts: BitSet?, configs: ATNConfigSet?) {

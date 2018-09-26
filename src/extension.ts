@@ -268,11 +268,15 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function doDescribe(dbObject: SchemaObject) : Promise<SchemaObject> {
     return new Promise<SchemaObject>((resolve, reject) => {
-        jvmcode.send('jdbcode.describe', { connection: currentConnection, dbObject: dbObject }).then((reply) => {
-            resolve(reply.body)
-        }).catch((error) => {
-            reject(error)
-        })
+        if (!currentConnection) {
+            reject({message: 'No database connection open'})
+        } else {
+           jvmcode.send('jdbcode.describe', { connection: currentConnection, dbObject: dbObject }).then((reply) => {
+                resolve(reply.body)
+            }).catch((error) => {
+                reject(error)
+            })
+        }
     })
 }
 

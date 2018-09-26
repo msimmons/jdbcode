@@ -99,8 +99,9 @@ class SchemaDescriber {
     }
 
     private fun describeTable(connection: Connection, objectData: ObjectData) : TableData {
+        val schema = if (objectData.owner.isNullOrEmpty()) null else objectData.owner
         val tableData = TableData(objectData.owner, objectData.name, objectData.type)
-        val columns = connection.metaData.getColumns(null, objectData.owner, objectData.name, null)
+        val columns = connection.metaData.getColumns(null, schema, objectData.name, null)
         while ( columns.next() ) {
             val name = columns.getString("COLUMN_NAME")
             val type = columns.getString("TYPE_NAME")

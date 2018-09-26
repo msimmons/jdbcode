@@ -13,127 +13,24 @@ export class ObjectSpec {
 
 export class ListenerFactory {
 
-    caretObject : ObjectSpec
-    tableMap : Map<String, Object>
-
     createListener(caret: Position) : object {
-        this.caretObject = new ObjectSpec()
-        this.tableMap = new Map()
-        return new SqlListener(caret, this.caretObject, this.tableMap)
-    }
-
-    getResult() : ObjectSpec {
-        switch ( this.caretObject.type ) {
-            case 'column':
-                let tableEntry = this.tableMap[this.caretObject.owner]
-                this.caretObject.owner = (tableEntry) ? tableEntry.table : ""
-                break
-            case 'table':
-            case 'owner':
-                break
-            case 'alias':
-            case 'column_list':
-                this.tableMap.forEach((value, key) =>{ this.caretObject.values.push(key.toString())})
-                break
-        }
-        return this.caretObject
+        return new SqlListener(caret)
     }
 }
 
-let SqlListener = function(caret: Position, caretObject: ObjectSpec, tableMap: Map<String,Object>) : void {
+let SqlListener = function(caret: Position) : void {
     SqlJSListener.call(this)
     this.caret = caret
-    this.caretObject = caretObject
-    this.tableMap = tableMap
     return this
 };
 
 SqlListener.prototype = Object.create(SqlJSListener.prototype)
 SqlListener.prototype.constructor = SqlListener
 
-SqlListener.prototype.exitTable_expression = function(ctx) {
-    let fq_table_name
-    let alias_name
-    let table_name
-    let owner_name
-    if ( !ctx.children ) {
-        if ( this.isCaretInChild(ctx) ) this.caretObject.type = 'table_list'
-        return
-    }
-    ctx.children.forEach((child) => {
-        if ( child instanceof SqlJSParser.Fq_table_nameContext ) fq_table_name = child
-        if ( child instanceof SqlJSParser.Alias_nameContext ) alias_name = child.start.text
-    })
-    fq_table_name.children.forEach((child) => {
-        if ( child instanceof SqlJSParser.Table_nameContext ) {
-            table_name = child.start.text
-        }
-        if ( child instanceof SqlJSParser.Owner_nameContext ) {
-            owner_name =  child.start.text
-        }
-    })
-    if ( alias_name ) this.tableMap[alias_name] = {table: table_name, owner: owner_name}
-    else this.tableMap[table_name] = {table: table_name, owner: owner_name}
+SqlListener.prototype.enterSql_file = function(ctx) {
+    let stop = ctx.stop
 }
 
-SqlListener.prototype.exitFq_table_name = function(ctx) {
-    let table_name
-    let owner_name
-    let type
-    if ( !ctx.children ) {
-        if ( this.isCaretInChild(ctx) ) this.caretObject.type = 'table'
-        return
-    }
-    ctx.children.forEach((child) => {
-        if ( child instanceof SqlJSParser.Table_nameContext ) {
-            table_name = child.start.text
-            if ( this.isCaretInChild(child) ) type = 'table'
-        }
-        if ( child instanceof SqlJSParser.Owner_nameContext ) {
-            owner_name = child.start.text
-            if ( this.isCaretInChild(child) ) type = 'owner'
-        }
-    })
-    if ( type ) {
-        this.caretObject.type = type
-        this.caretObject.owner = owner_name
-        this.caretObject.name = table_name
-    }
-}
-
-SqlListener.prototype.exitColumn_expr = function(ctx) {
-    let alias_name
-    let column_name
-    let column_alias
-    let type
-    if ( !ctx.children ) {
-        if ( this.isCaretInChild(ctx) ) this.caretObject.type = 'column_list'
-        return
-    }
-    ctx.children.forEach((child) => {
-        if ( child instanceof SqlJSParser.Column_nameContext ) {
-            column_name = child.start.text
-            if ( this.isCaretInChild(child) ) type = 'column'
-        }
-        if ( child instanceof SqlJSParser.Column_wildcardContext ) {
-            column_name = child.start.text
-            if ( this.isCaretInChild(child) ) type = 'column'
-        }
-        if ( child instanceof SqlJSParser.Alias_nameContext ) {
-            alias_name = child.start.text
-            if ( this.isCaretInChild(child) ) type = 'alias'
-        }
-        if ( child instanceof SqlJSParser.Column_aliasContext ) column_alias = child.start.text
-    })
-    if ( type ) {
-        this.caretObject.type = type
-        this.caretObject.owner = alias_name
-        this.caretObject.name = column_name
-    }
-}
-
-SqlListener.prototype.isCaretInChild = function(child: ParserContext) : boolean {
-    return /*this.caret.line === child.start.line && */ true &&
-        this.caret.character >= child.start.start && 
-        this.caret.character <= child.start.stop+1
+SqlListener.prototype.exitSql_file = function(ctx) {
+    let stop = ctx.stop
 }

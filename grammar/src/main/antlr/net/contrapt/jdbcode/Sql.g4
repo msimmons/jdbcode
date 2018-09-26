@@ -1,11 +1,7 @@
 grammar Sql;
 
-sql_file
- : ';'* statement ( ';'+ statement )* ';'*
- ;
-
 statement 
- : select_statement | dml_statement
+ : select_statement | dml_statement | ddl_statement
  ;
 
 dml_statement
@@ -13,7 +9,7 @@ dml_statement
  ;
 
 ddl_statement
- :
+ : 
  ;
 
 select_statement
@@ -302,31 +298,6 @@ keyword
  | K_WITHOUT
  ;
 
-SCOL : ';';
-DOT : '.';
-OPEN_PAR : '(';
-CLOSE_PAR : ')';
-COMMA : ',';
-ASSIGN : '=';
-STAR : '*';
-PLUS : '+';
-MINUS : '-';
-TILDE : '~';
-PIPE2 : '||';
-DIV : '/';
-MOD : '%';
-LT2 : '<<';
-GT2 : '>>';
-AMP : '&';
-PIPE : '|';
-LT : '<';
-LT_EQ : '<=';
-GT : '>';
-GT_EQ : '>=';
-EQ : '==';
-NOT_EQ1 : '!=';
-NOT_EQ2 : '<>';
-
 K_ABORT : A B O R T;
 K_ACTION : A C T I O N;
 K_ADD : A D D;
@@ -487,7 +458,7 @@ MULTILINE_COMMENT
  ;
 
 SPACES
- : [ \u000B\t\r\n] -> channel(HIDDEN)
+ : [ \u000B\t\n\r] -> channel(HIDDEN)
  ;
 
 UNEXPECTED_CHAR
