@@ -1,22 +1,18 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { connect } from 'tls';
-import { resolve } from 'path';
 import { Uri } from 'vscode';
-import { Event } from 'vscode';
-import { TextDocument } from 'vscode';
 import { SqlStatement } from './models'
 
 export class ResultSetWebview {
 
     private context: vscode.ExtensionContext
-    private jvmcode: vscode.Extension<any>
+    private jvmcode: any
     private sqlStatement: SqlStatement
     private panel: vscode.WebviewPanel
     private hasPendingUpdate: boolean = false
 
-	public constructor(context: vscode.ExtensionContext, jvmcode: vscode.Extension<any>) {
+	public constructor(context: vscode.ExtensionContext, jvmcode: any) {
         this.context = context
         this.jvmcode = jvmcode
     }
@@ -83,7 +79,7 @@ export class ResultSetWebview {
     }
 
     private execute () {
-        this.jvmcode.exports.send('jdbcode.execute', this.sqlStatement).then((reply) => {
+        this.jvmcode.send('jdbcode.execute', this.sqlStatement).then((reply) => {
             this.update(reply.body)
         }).catch((error) => {
             vscode.window.showErrorMessage('Error executing SQL: ' + error.message)
@@ -94,7 +90,7 @@ export class ResultSetWebview {
         // Clear the rows so we aren't sending them back to server
         this.sqlStatement.rows = []
         this.sqlStatement.columns = []
-        this.jvmcode.exports.send('jdbcode.reexecute', this.sqlStatement).then((reply) => {
+        this.jvmcode.send('jdbcode.reexecute', this.sqlStatement).then((reply) => {
             this.update(reply.body)
         }).catch((error) => {
             vscode.window.showErrorMessage('Error executing SQL: ' + error.message)
@@ -102,7 +98,7 @@ export class ResultSetWebview {
     }
 
     private cancel () {
-        this.jvmcode.exports.send('jdbcode.cancel', { id: this.sqlStatement.id }).then((reply) => {
+        this.jvmcode.send('jdbcode.cancel', { id: this.sqlStatement.id }).then((reply) => {
             this.update(reply.body)
         }).catch((error) => {
             vscode.window.showErrorMessage('Error cancelling statement: ' + error.message)
@@ -110,7 +106,7 @@ export class ResultSetWebview {
     }
 
     private commit () {
-        this.jvmcode.exports.send('jdbcode.commit', { id: this.sqlStatement.id }).then((reply) => {
+        this.jvmcode.send('jdbcode.commit', { id: this.sqlStatement.id }).then((reply) => {
             this.update(reply.body)
         }).catch((error) => {
             vscode.window.showErrorMessage('Error committing transaction: ' + error.message)
@@ -118,7 +114,7 @@ export class ResultSetWebview {
     }
 
     private rollback () {
-        this.jvmcode.exports.send('jdbcode.rollback', { id: this.sqlStatement.id }).then((reply) => {
+        this.jvmcode.send('jdbcode.rollback', { id: this.sqlStatement.id }).then((reply) => {
             this.update(reply.body)
         }).catch((error) => {
             vscode.window.showErrorMessage('Error rolling back transaction: ' + error.message)
@@ -132,7 +128,7 @@ export class ResultSetWebview {
     }
 
     private disposed () {
-        this.jvmcode.exports.send('jdbcode.close', { id: this.sqlStatement.id }).then((reply) => {
+        this.jvmcode.send('jdbcode.close', { id: this.sqlStatement.id }).then((reply) => {
         }).catch((error) => {
             vscode.window.showErrorMessage('Error closing statement: ' + error.message)
         })

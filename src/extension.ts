@@ -2,7 +2,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { QuickPickOptions, StatusBarItem, StatusBarAlignment, Uri, ConfigurationTarget, ProgressLocation, Progress, Disposable } from 'vscode'
+import { StatusBarItem, StatusBarAlignment, Uri, ConfigurationTarget, ProgressLocation } from 'vscode'
 import { SchemaContentProvider } from './schema_content_provider'
 import { DatabaseTreeProvider } from './database_tree_provider'
 import { CompletionProvider } from './completion_provider'
