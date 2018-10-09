@@ -40,6 +40,6 @@ export class SchemaObject implements TreeNode {
     name: string
     type: string
     connection: string
-    columns: string[]
+    columns: any[]
     rows: string[]
 }

@@ -1,11 +1,7 @@
 grammar Sql;
 
-sql_file
- : ';'* statement ( ';'+ statement )* ';'*
- ;
-
 statement 
- : select_statement | dml_statement
+ : select_statement | dml_statement | ddl_statement
  ;
 
 dml_statement
@@ -13,11 +9,11 @@ dml_statement
  ;
 
 ddl_statement
- :
+ : 
  ;
 
 select_statement
- : K_SELECT (K_DISTINCT)? column_list
+ : K_SELECT (K_DISTINCT)? select_list
    (K_FROM table_list)?
    (K_WHERE where_clause)?
    (K_GROUP K_BY group_clause)?
@@ -33,48 +29,27 @@ compound_operator
  ;
 
 insert_statement
- : K_INSERT K_INTO fq_table_name
+ : K_INSERT K_INTO table_expr
+   insert_list?
+   values_list
  ;
 
 update_statement
- : K_UPDATE fq_table_name 
+ : K_UPDATE table_expr
    K_SET set_clause 
    (K_WHERE where_clause)?
  ;
 
 delete_statement
- : K_DELETE K_FROM fq_table_name 
+ : K_DELETE K_FROM table_expr 
    (K_WHERE where_clause)?
  ;
 
-table_name
+owner_name
  : IDENTIFIER
  ;
 
-fq_table_name
- : ( owner_name '.' )? table_name
- ;
-
-table_expression
- : fq_table_name ( K_AS? alias_name )?
- | '(' select_statement ')' K_AS? alias_name
- ;
-
-join_operator
- : ','
- | K_NATURAL? ( K_LEFT K_OUTER? | K_INNER | K_CROSS )? K_JOIN
- ;
-
-join_constraint
- : ( K_ON expr
-   | K_USING '(' column_name ( ',' column_name )* ')' )?
- ;
-
-table_list
- : table_expression ( ',' table_expression | join_operator table_expression join_constraint )*
- ;
-
-owner_name
+table_name
  : IDENTIFIER
  ;
 
@@ -84,28 +59,77 @@ alias_name
 
 column_name
  : IDENTIFIER
+ | '*'
  ;
 
-column_wildcard
- : '*'
+column_alias
+ : IDENTIFIER
+ | STRING_LITERAL
  ;
 
-column_list
- : column_expr (',' column_expr)*
+function_name
+ : IDENTIFIER
+ ;
+
+table_expr
+ : ( owner_name '.' )? table_name
+ ;
+
+table_item
+ : table_expr ( K_AS? alias_name )?
+ | '(' select_statement ')' K_AS? alias_name
+ ;
+
+table_list
+ : table_item ( ',' table_item | join_operator table_item join_constraint )*
+ ;
+
+join_operator
+ : K_NATURAL? ( K_LEFT K_OUTER? | K_INNER | K_CROSS )? K_JOIN
+ ;
+
+join_constraint
+ : ( K_ON value_expr
+   | K_USING '(' column_expr ( ',' column_expr )* ')' )?
+ ;
+
+select_list
+ : select_item (',' select_item)*
+ ;
+
+select_item
+ : value_expr ( K_AS? column_alias)?
  ;
 
 column_expr
- : (alias_name '.')? column_wildcard
- | (alias_name '.')? column_name (K_AS? column_alias)?
- | expr ( K_AS? column_alias)?
+ : (alias_name '.')? column_name
+ ;
+
+value_expr
+ : literal_value
+ | column_expr
+ | unary_operator value_expr
+ | value_expr operator value_expr
+ | function_name '(' ( K_DISTINCT? value_expr ( ',' value_expr )* | '*' )? ')'
+ | '(' value_expr ')'
+ | K_CASE value_expr? ( K_WHEN value_expr K_THEN value_expr )+ ( K_ELSE value_expr )? K_END
  ;
 
 where_clause
- :
+ : value_expr+
+ ;
+
+insert_list
+ : '(' column_expr (',' column_expr)* ')'
+ ;
+
+values_list
+ : K_VALUES '(' value_expr (',' value_expr)* ')'
+ | select_statement
  ;
 
 set_clause
- : column_name '=' expr (',' column_name '=' expr)*
+ : column_expr '=' value_expr (',' column_expr '=' value_expr)*
  ;
 
 order_direction
@@ -115,7 +139,7 @@ order_direction
 
 order_expr
  : NUMERIC_LITERAL order_direction?
- | (alias_name '.')? column_name order_direction?
+ | column_expr order_direction?
  ;
 
 order_clause
@@ -129,7 +153,7 @@ group_clause
 operator
  : '||'
  | ('*'|'/'|'%')
- | ('<'| '>'| '<='| '>='| '!='| '<>')
+ | ('=' | '<' | '>'| '<='| '>='| '!='| '<>')
  | (K_IS | K_IS K_NOT | K_IN | K_LIKE | K_AND | K_OR)
  ;
  
@@ -140,63 +164,11 @@ unary_operator
  | K_NOT
  ;
 
-value_expr
- : literal_value
- | unary_operator value_expr
- | value_expr operator value_expr
- | function_name '(' (value_expr (',' value_expr)*)? ')'
- | '(' value_expr ')'
- ;
-
-expr
- : literal_value
- | BIND_PARAMETER
- | ( ( database_name '.' )? table_name '.' )? column_name
- | unary_operator expr
- | expr '||' expr
- | expr ( '*' | '/' | '%' ) expr
- | expr ( '+' | '-' ) expr
- | expr ( '<<' | '>>' | '&' | '|' ) expr
- | expr ( '<' | '<=' | '>' | '>=' ) expr
- | expr ( '=' | '==' | '!=' | '<>' | K_IS | K_IS K_NOT | K_IN | K_LIKE | K_GLOB | K_MATCH | K_REGEXP ) expr
- | expr K_AND expr
- | expr K_OR expr
- | function_name '(' ( K_DISTINCT? expr ( ',' expr )* | '*' )? ')'
- | '(' expr ')'
-// | K_CAST '(' expr K_AS type_name ')'
- | expr K_COLLATE collation_name
- | expr K_NOT? ( K_LIKE | K_GLOB | K_REGEXP | K_MATCH ) expr ( K_ESCAPE expr )?
- | expr ( K_ISNULL | K_NOTNULL | K_NOT K_NULL )
- | expr K_IS K_NOT? expr
- | expr K_NOT? K_BETWEEN expr K_AND expr
- //| expr K_NOT? K_IN ( '(' ( select_stmt
- //                         | expr ( ',' expr )*
- //                         )? 
- //                     ')'
- //                   | ( database_name '.' )? table_name )
- //| ( ( K_NOT )? K_EXISTS )? '(' select_stmt ')'
- | K_CASE expr? ( K_WHEN expr K_THEN expr )+ ( K_ELSE expr )? K_END
- ;
-
-signed_number
- : ( '+' | '-' )? NUMERIC_LITERAL
- ;
-
 literal_value
  : NUMERIC_LITERAL
  | STRING_LITERAL
  | BLOB_LITERAL
  | K_NULL
- ;
-
-
-error_message
- : STRING_LITERAL
- ;
-
-column_alias
- : IDENTIFIER
- | STRING_LITERAL
  ;
 
 keyword
@@ -325,100 +297,6 @@ keyword
  | K_WITH
  | K_WITHOUT
  ;
-
-// TODO check all names below
-
-name
- : any_name
- ;
-
-function_name
- : any_name
- ;
-
-database_name
- : any_name
- ;
-
-table_or_index_name 
- : any_name
- ;
-
-new_table_name 
- : any_name
- ;
-
-collation_name 
- : any_name
- ;
-
-foreign_table 
- : any_name
- ;
-
-index_name 
- : any_name
- ;
-
-trigger_name
- : any_name
- ;
-
-view_name 
- : any_name
- ;
-
-module_name 
- : any_name
- ;
-
-pragma_name 
- : any_name
- ;
-
-savepoint_name 
- : any_name
- ;
-
-table_alias 
- : any_name
- ;
-
-transaction_name
- : any_name
- ;
-
-any_name
- : IDENTIFIER 
- | keyword
- | STRING_LITERAL
- | '(' any_name ')'
- ;
-
-SCOL : ';';
-DOT : '.';
-OPEN_PAR : '(';
-CLOSE_PAR : ')';
-COMMA : ',';
-ASSIGN : '=';
-STAR : '*';
-PLUS : '+';
-MINUS : '-';
-TILDE : '~';
-PIPE2 : '||';
-DIV : '/';
-MOD : '%';
-LT2 : '<<';
-GT2 : '>>';
-AMP : '&';
-PIPE : '|';
-LT : '<';
-LT_EQ : '<=';
-GT : '>';
-GT_EQ : '>=';
-EQ : '==';
-NOT_EQ1 : '!=';
-NOT_EQ2 : '<>';
 
 K_ABORT : A B O R T;
 K_ACTION : A C T I O N;
@@ -580,7 +458,7 @@ MULTILINE_COMMENT
  ;
 
 SPACES
- : [ \u000B\t\r\n] -> channel(HIDDEN)
+ : [ \u000B\t\n\r] -> channel(HIDDEN)
  ;
 
 UNEXPECTED_CHAR

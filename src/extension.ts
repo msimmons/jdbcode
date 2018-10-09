@@ -2,7 +2,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { QuickPickOptions, StatusBarItem, StatusBarAlignment, Uri, ConfigurationTarget, ProgressLocation, Progress, Disposable } from 'vscode'
+import { StatusBarItem, StatusBarAlignment, Uri, ConfigurationTarget, ProgressLocation } from 'vscode'
 import { SchemaContentProvider } from './schema_content_provider'
 import { DatabaseTreeProvider } from './database_tree_provider'
 import { CompletionProvider } from './completion_provider'
@@ -18,8 +18,7 @@ let statusBarItem: StatusBarItem
 let schemaProvider: DatabaseTreeProvider
 let schemaContentProvider: SchemaContentProvider
 let completionProvider: CompletionProvider
-let jvmcode: vscode.Extension<any>
-let httpPort: number
+let jvmcode: any
 let docCount = 0
 let resultSetPanels: ResultSetWebview[] = []
 
@@ -31,7 +30,8 @@ const CLOSE_CHOICE = '+ Close'
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 
-    jvmcode = vscode.extensions.getExtension('contrapt.jvmcode')
+    // Get the exported API from jvmcode extension
+    jvmcode = vscode.extensions.getExtension('contrapt.jvmcode').exports
 
     installVerticle()
 
@@ -40,20 +40,9 @@ export function activate(context: vscode.ExtensionContext) {
         let config = vscode.workspace.getConfiguration("jdbcode")
         let drivers = config.get('drivers') as Array<object>
         let jarFiles = drivers.map((it) => { return it['jarFile'] }).concat(jarFile)
-        jvmcode.exports.install(jarFiles, 'net.contrapt.jdbcode.JDBCVerticle').then((result) => {
-            //startServer()
+        jvmcode.install(jarFiles, 'net.contrapt.jdbcode.JDBCVerticle').then((result) => {
             createStatusBar()
             registerProviders()
-        })
-    }
-
-    function startServer() {
-        let webRoot = context.asAbsolutePath('ui/dist')
-        console.log('Start server at ' + webRoot)
-        jvmcode.exports.serve('/jdbcode/*', webRoot).then((reply) => {
-            httpPort = reply.body['port']
-        }).catch((err) => {
-            vscode.window.showErrorMessage('Failed to start content server: ' + err.message)
         })
     }
 
@@ -82,22 +71,21 @@ export function activate(context: vscode.ExtensionContext) {
     let addDriver = vscode.commands.registerCommand('jdbcode.addDriver', () => {
         let config = vscode.workspace.getConfiguration("jdbcode")
         let drivers = config.get('drivers') as Array<object>
-        vscode.window.showInputBox({ placeHolder: 'A name for the driver' }).then((name) => {
-            if (!name) return
-            if (drivers.find((d) => { return d['name'] === name })) {
-                vscode.window.showErrorMessage('Driver ' + name + ' already exists')
-                return
-            }
-            vscode.window.showInputBox({ placeHolder: 'Path to jar file' }).then((jarFile) => {
-                if (!jarFile) return
+        vscode.window.showOpenDialog({filters: {'Driver Jar': ['jar']}, canSelectMany: false}).then((jarFile) => {
+            if (!jarFile || jarFile.length == 0) return
+            vscode.window.showInputBox({ placeHolder: 'A name for the driver' }).then((name) => {
+                if (!name) return
+                if (drivers.find((d) => { return d['name'] === name })) {
+                    vscode.window.showErrorMessage('Driver ' + name + ' already exists')
+                    return
+                }
                 vscode.window.showInputBox({ placeHolder: 'Driver class name' }).then((driverClass) => {
                     if (!driverClass) return
-                    drivers.push({ name: name, jarFile: jarFile, driverClass: driverClass })
+                    drivers.push({ name: name, jarFile: jarFile[0]['path'], driverClass: driverClass })
                     config.update('drivers', drivers, ConfigurationTarget.Global)
                 })
             })
         })
-
     })
 
     /**
@@ -156,7 +144,7 @@ export function activate(context: vscode.ExtensionContext) {
         // Send connection info to server, it will create connection pool if it doesn't already exist
         vscode.window.withProgress({ location: ProgressLocation.Window, title: "Connect to DB" }, (progress) => {
             progress.report({ message: 'Connecting to ' + connection['name'] })
-            return jvmcode.exports.send('jdbcode.connect', { connection: connection, driver: driver }).then((reply) => {
+            return jvmcode.send('jdbcode.connect', { connection: connection, driver: driver }).then((reply) => {
                 schemas = reply.body['schemas']
                 schemaProvider.setSchemas(connection, schemas)
                 completionProvider.setSchemas(schemas)
@@ -216,7 +204,7 @@ export function activate(context: vscode.ExtensionContext) {
         statusBarItem.text = '$(database)'
         if (!currentConnection) return
         // Tell server to disconnect (close current statements and connections)
-        jvmcode.exports.send('jdbcode.disconnect', currentConnection).then((reply) => {
+        jvmcode.send('jdbcode.disconnect', currentConnection).then((reply) => {
             currentConnection = null
             vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', false)
             console.log('Closed connection')
@@ -262,7 +250,7 @@ export function activate(context: vscode.ExtensionContext) {
     let describe = vscode.commands.registerCommand("jdbcode.describe", (dbObject) => {
         let docName = dbObject.owner+'.'+dbObject.name
         let uri = Uri.parse(schemaContentProvider.scheme + '://' + docName)
-        jvmcode.exports.send('jdbcode.describe', { connection: currentConnection, dbObject: dbObject }).then((reply) => {
+        jvmcode.send('jdbcode.describe', { connection: currentConnection, dbObject: dbObject }).then((reply) => {
             dbObject = reply.body
             vscode.commands.executeCommand('vscode.previewHtml', uri, vscode.ViewColumn.One, docName).then((success) => {
                 schemaContentProvider.update(uri, dbObject)
@@ -280,11 +268,15 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function doDescribe(dbObject: SchemaObject) : Promise<SchemaObject> {
     return new Promise<SchemaObject>((resolve, reject) => {
-        jvmcode.exports.send('jdbcode.describe', { connection: currentConnection, dbObject: dbObject }).then((reply) => {
-            resolve(reply.body)
-        }).catch((error) => {
-            reject(error)
-        })
+        if (!currentConnection) {
+            reject({message: 'No database connection open'})
+        } else {
+           jvmcode.send('jdbcode.describe', { connection: currentConnection, dbObject: dbObject }).then((reply) => {
+                resolve(reply.body)
+            }).catch((error) => {
+                reject(error)
+            })
+        }
     })
 }
 

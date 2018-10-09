@@ -14,6 +14,8 @@
         "node_modules",
         ".vscode-test",
         "out",
-        "ui"
+        "ui",
+        "server",
+        "grammar"
     ]
 }
