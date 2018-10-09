@@ -9,6 +9,10 @@ class StatementParser {
 
     fun parse(sql: String, char: Int): Item {
         parser.parse(sql)
-        return parser.getCaretItem(char)
+        val item = parser.getCaretItem(char)
+        return when (item) {
+            is Item.NullItem, is Item.SyntaxError -> if (char > 0) parser.getCaretItem(char - 1) else item
+            else -> item
+        }
     }
 }

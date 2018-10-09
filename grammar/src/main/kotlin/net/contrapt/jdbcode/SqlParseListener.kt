@@ -3,6 +3,7 @@ package net.contrapt.jdbcode
 import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.atn.ATNConfigSet
 import org.antlr.v4.runtime.dfa.DFA
+import org.antlr.v4.runtime.misc.Interval
 import java.util.*
 
 class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
@@ -29,15 +30,32 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
         parser.statement()
     }
 
+    private fun getLocation(ctx: ParserRuleContext, pad: Boolean) : TokenRange {
+        val point = getStartAndStop(ctx, pad)
+        return TokenRange(point.first, point.second, ctx.start.line, ctx.start.charPositionInLine)
+    }
+
+    /**
+     * Find the indices of any whitespace surrounding this rule -- handles cases where the cursor is sitting in whitespace
+     * right before a rule starts or after a rule ends.  It is convenient to consider the whitespace as part of the rule
+     * for completion purposes
+     */
+    private fun getStartAndStop(ctx: ParserRuleContext, pad: Boolean) : Pair<Int, Int> {
+        var left = ctx.start.startIndex
+        var right = ctx.stop?.stopIndex ?: ctx.start.stopIndex
+        var end = ctx.start.inputStream.size()
+        while (ctx.start.inputStream.getText(Interval(left-1, left-1)).isBlank() && left >= 1 && pad) left--
+        while (ctx.start.inputStream.getText(Interval(right+1, right+1)).isBlank() && right < end && pad) right++
+        return Pair(left, right)
+    }
+
     private fun getLocation(ctx: ParserRuleContext) : TokenRange {
-        val start = ctx.start.startIndex
-        val stop = ctx.stop?.stopIndex ?: ctx.start.stopIndex
-        return TokenRange(start, stop, ctx.start.line, ctx.start.charPositionInLine)
+        return getLocation(ctx, false)
     }
 
     fun getCaretItem(char: Int) : Item {
         return itemLocations.find {
-            it.range.start <= char && it.range.stop >= char
+            it.range.start <= char && it.range.stop >= char && !(it is Item.NullItem)
         } ?: syntaxError ?: Item.NullItem(TokenRange(0, 0, 0, char))
     }
 
@@ -50,11 +68,11 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
     }
 
     override fun exitTable_list(ctx: SqlJParser.Table_listContext) {
-        itemLocations.add(Item.TableList(getLocation(ctx)))
+        itemLocations.add(Item.TableList(getLocation(ctx, true), tableScopes.peek()))
     }
 
     override fun exitSelect_list(ctx: SqlJParser.Select_listContext) {
-        itemLocations.add(Item.SelectList(getLocation(ctx)))
+        itemLocations.add(Item.SelectList(getLocation(ctx, true), tableScopes.peek()))
     }
 
     override fun exitTable_item(ctx: SqlJParser.Table_itemContext) {

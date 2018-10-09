@@ -1,8 +1,8 @@
-package net.contrapt.jdbcode.fixture
+package net.contrapt.jdbcode
 
 import org.junit.Assert.assertEquals
 
-object DeleteFixture1 : Fixture {
+class DeleteTest : AbstractSqlParserTest() {
     override val sql = """delete from tofu where id = 3"""
     override val expectations = listOf(
             Expected.TableItem(13){
@@ -14,5 +14,4 @@ object DeleteFixture1 : Fixture {
             }
     )
     override val partials = listOf<Expected<*>>()
-
 }

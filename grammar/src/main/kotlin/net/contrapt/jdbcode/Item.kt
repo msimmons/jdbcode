@@ -3,8 +3,16 @@ package net.contrapt.jdbcode
 sealed class Item(val type: String, val range: TokenRange) {
 
     class NullItem(range: TokenRange) : Item("null", range)
-    class SelectList(range: TokenRange) : Item("select_list", range)
-    class TableList(range: TokenRange) : Item("table_list", range)
+
+    class TableList(
+            range: TokenRange,
+            val tableMap: Map<String, TableItem>
+    ) : Item("table_list", range)
+
+    class SelectList(
+            range: TokenRange,
+            val tableMap: Map<String, TableItem>
+    ) : Item("select_list", range)
 
     class TableItem(
             range: TokenRange,

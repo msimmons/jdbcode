@@ -1,9 +1,9 @@
-package net.contrapt.jdbcode.fixture
+package net.contrapt.jdbcode
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 
-object InsertFixture1 : Fixture {
+class InsertTest : AbstractSqlParserTest() {
     override val sql = """insert into data (a, b, c) select af, cd, ef from tea"""
     override val expectations = listOf(
             Expected.TableItem(12){

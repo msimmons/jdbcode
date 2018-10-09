@@ -1,10 +1,12 @@
-package net.contrapt.jdbcode.fixture
+package net.contrapt.jdbcode
 
 import org.junit.Assert.*
 
-object SelectFixture1 : Fixture {
-    override val sql = """select col1, a.col2, a.col3 "foo", * from x.tofu as a where a.col1 = 'hello' and a.col2"""
+class SelectTest : AbstractSqlParserTest() {
+    override val sql = """select col1, a.col2, a.col3 "foo", * from x.tofu as a where a.col1 = 'hello' and a.col2 """
     override val expectations = listOf(
+            Expected.SelectList(6) {
+            },
             Expected.ColumnExpr(7) {
                 assertEquals("col1", it.name)
                 assertTrue(it.tableMap.containsKey("a"))
@@ -19,7 +21,7 @@ object SelectFixture1 : Fixture {
                 assertEquals("col3", it.name)
                 assertEquals("tofu", it.tableMap[it.tableAlias]?.name)
             },
-            Expected.NullItem(40) {},
+            Expected.TableList(41) {},
             Expected.TableItem(42) {
                 assertEquals("tofu", it.name)
                 //assertEquals("a", it.alias)
@@ -36,7 +38,10 @@ object SelectFixture1 : Fixture {
             Expected.ColumnExpr(7) {
                 assertEquals("c", it.name)
                 assertFalse(it.tableMap.containsKey("a"))
+            },
+            Expected.TableList(41) {
+            },
+            Expected.NullItem(87) {
             }
     )
-
 }

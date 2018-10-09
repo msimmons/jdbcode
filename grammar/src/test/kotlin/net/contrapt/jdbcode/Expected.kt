@@ -1,27 +1,28 @@
-package net.contrapt.jdbcode.fixture
+package net.contrapt.jdbcode
 
-import net.contrapt.jdbcode.Item
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import kotlin.reflect.KClass
 
 sealed class Expected<T: Item>(val col: Int, val klass: KClass<T>) {
 
-    fun test(item: Item?) {
+    fun test(item: Item) {
         return when (item) {
-            null -> testNullItem(item)
+            is Item.NullItem -> testNullItem(item)
             is Item.ColumnExpr -> testColumnExpr(item)
             is Item.SelectList -> testSelectList(item)
             is Item.TableList -> testTableList(item)
             is Item.TableItem -> testTableItem(item)
+            is Item.SyntaxError -> testSyntaxError(item)
         }
     }
 
-    open protected val testNullItem: (Item?) -> Unit = {assertClass(it)}
+    open protected val testNullItem: (Item.NullItem) -> Unit = {assertClass(it)}
     open protected val testColumnExpr: (Item.ColumnExpr) -> Unit = {assertClass(it)}
     open protected val testSelectList: (Item.SelectList) -> Unit = {assertClass(it)}
     open protected val testTableList: (Item.TableList) -> Unit = {assertClass(it)}
     open protected val testTableItem: (Item.TableItem) -> Unit = {assertClass(it)}
+    open protected val testSyntaxError: (Item.SyntaxError) -> Unit = {assertClass(it)}
 
     private fun assertClass(item: Item?) {
         when (item) {

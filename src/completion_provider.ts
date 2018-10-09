@@ -1,8 +1,6 @@
 import * as vscode from 'vscode'
 import { CompletionItemKind } from 'vscode';
 import { SchemaData, SchemaObject } from './models'
-import { SqlParser } from './sql_parser'
-import { ObjectSpec } from './sql_listener'
 import { doDescribe } from './extension'
 
 export class CompletionProvider implements vscode.CompletionItemProvider {
@@ -61,6 +59,8 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
                 return this.getColumnItems(item)
             case 'table_list':
                 return this.schemaItems.concat(this.tableItems)
+            case 'select_list':
+                return this.getColumnItems(item)
             case 'table_item':
                 return this.schemaItems.concat(this.tableItems)
             case 'syntax_error':
