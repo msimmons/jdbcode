@@ -2,7 +2,7 @@
   "name": "jdbcode",
   "displayName": "JDBCode",
   "description": "JDBC extension built on jvmcode",
-  "version": "0.0.1",
+  "version": "0.9.0",
   "publisher": "contrapt",
   "repository": {
     "url": "https://github.com/msimmons/jdbcode"
