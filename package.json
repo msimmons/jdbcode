@@ -8,7 +8,7 @@
     "url": "https://github.com/msimmons/jdbcode"
   },
   "engines": {
-    "vscode": "^1.23.0"
+    "vscode": "^1.28.0"
   },
   "categories": [
     "Other"
