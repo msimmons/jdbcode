@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import { CompletionItemKind } from 'vscode';
 import { SchemaData, SchemaObject } from './models'
-import { doDescribe } from './extension'
+import { doDescribe, trimSql } from './extension'
 
 export class CompletionProvider implements vscode.CompletionItemProvider {
 
@@ -45,7 +45,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
 
     provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
         let range = this.getSqlRange(position, document)
-        let sql = document.getText(range)
+        let sql = trimSql(document.getText(range))
         // Calculate the caret position's character offset relative to this block of SQL (0 based)
         let caretOffset = document.offsetAt(position) - document.offsetAt(range.start)
         return this.getCompletionItems(sql, caretOffset)

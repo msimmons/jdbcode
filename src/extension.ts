@@ -179,7 +179,7 @@ export function activate(context: vscode.ExtensionContext) {
         let sqlStatement: SqlStatement = {
             id: queryId,
             connection: currentConnection['name'] as string,
-            sql: sql,
+            sql: trimSql(sql),
             columns: [],
             rows: [],
             status: 'executing'
@@ -278,6 +278,11 @@ export function doDescribe(dbObject: SchemaObject) : Promise<SchemaObject> {
             })
         }
     })
+}
+
+export function trimSql(sql: string) : string {
+    if (sql.charAt(sql.length-1) === ';') return sql.slice(0, sql.length-1)
+    else return sql
 }
 
 // this method is called when your extension is deactivated
