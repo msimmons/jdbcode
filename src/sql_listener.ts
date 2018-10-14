@@ -1,8 +1,5 @@
 import { SqlJSListener } from '../grammar/build/generated-src/antlr/main/net/contrapt/jdbcode/SqlJSListener'
-import { SqlJSParser } from '../grammar/build/generated-src/antlr/main/net/contrapt/jdbcode/SqlJSParser'
-import { ParserContext } from 'antlr4'
 import { Position } from 'vscode';
-import { SqlParser } from './sql_parser';
 
 export class ObjectSpec {
     type: string

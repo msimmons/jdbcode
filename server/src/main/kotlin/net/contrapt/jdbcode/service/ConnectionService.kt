@@ -1,34 +1,29 @@
 package net.contrapt.jdbcode.service
 
+import com.zaxxer.hikari.HikariDataSource
 import net.contrapt.jdbcode.model.*
-import org.apache.tomcat.jdbc.pool.DataSource
-import org.apache.tomcat.jdbc.pool.PoolProperties
 
 /**
  * Manage connection dataSources
  */
 open class ConnectionService {
 
-    private val dataSources = mutableMapOf<String, DataSource>()
+    private val dataSources = mutableMapOf<String, HikariDataSource>()
     private val configs = mutableMapOf<String, ConnectionData>()
     private val statements = mutableMapOf<String, StatementExecutor>()
     private val schemaDesriber = SchemaDescriber()
 
     open fun connect(connection: ConnectionData, driver: DriverData) : ConnectionData {
         if ( dataSources.containsKey(connection.name)) disconnect(connection)
-        val config = PoolProperties().apply {
-            url = connection.url
+        val dataSource = HikariDataSource().apply {
+            //dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
+            driverClassName = driver.driverClass
+            jdbcUrl = connection.url
             username = connection.username
             password = connection.password
-            validationQuery = connection.validationQuery
-            isTestOnBorrow = true
-            driverClassName = driver.driverClass
-            initialSize = 1
-            maxActive = 50
-            maxIdle = 5
-            minIdle = 1
+            poolName = connection.name
+            addDataSourceProperty("applicationName", "jdbcode")
         }
-        val dataSource = DataSource(config)
         configs.put(connection.name, connection)
         dataSources.put(connection.name, dataSource)
         connection.schemas.addAll(schemaDesriber.getSchemas(connection, dataSource))
@@ -39,7 +34,7 @@ open class ConnectionService {
     open fun disconnect(connection: ConnectionData) {
         closeStatements(connection)
         val dataSource = dataSources.remove(connection.name)
-        dataSource?.close(true)
+        dataSource?.close()
     }
 
     private fun closeStatements(connection: ConnectionData) {

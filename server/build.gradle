@@ -1,5 +1,5 @@
 dependencies {
-    compile group: 'org.apache.tomcat', name: 'tomcat-jdbc', version: tomcat_version
+    compile group: 'com.zaxxer', name: 'HikariCP', version: hikari_version
     compile project(":grammar")
 
     compileOnly "io.vertx:vertx-core:$vertx_version"
