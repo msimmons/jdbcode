@@ -1,5 +1,3 @@
-apply plugin: 'com.github.johnrengelman.shadow'
-
 dependencies {
     compile group: 'org.apache.tomcat', name: 'tomcat-jdbc', version: tomcat_version
     compile project(":grammar")
@@ -15,12 +13,13 @@ jar {
     manifest {
         attributes 'Main-Class': 'net.contrapt.jdbcode.Application'
     }
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
 }
 
-task deploy(type: Copy, dependsOn: 'shadowJar') {
+task deploy(type: Copy, dependsOn: ['build']) {
     from ("${project.buildDir}/libs") {
-        include shadowJar.archiveName
-        rename shadowJar.archiveName, 'jdbcode.jar'
+        include jar.archiveName
+        rename jar.archiveName, 'jdbcode.jar'
     }
     into "${project.rootDir}"
 }

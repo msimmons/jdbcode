@@ -8,7 +8,7 @@ server and event bus on which to run the JDBC services.
 - Database schema tree view for explorer
 - Connect to any JDBC datasource
 - Execute SQL statements
-- TODO: provide completions
+- Provide table and column completions
 
 ## Requirements
 

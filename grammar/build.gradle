@@ -7,3 +7,5 @@ dependencies {
 generateGrammarSource {
     arguments += ['-lib', 'src/main/antlr/net/contrapt/jdbcode']
 }
+
+build.dependsOn = ['generateGrammarSource']
