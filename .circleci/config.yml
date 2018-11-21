@@ -12,7 +12,7 @@ references:
     - v1-nvm-deps-
 
   jvm_cache_key: &jvm_cache_key
-    - v1-jvm-deps-{{ checksum "build.gradle" }}-{{ checksum "server/build.gradle" }}-{{ checksum "grammar/build.gradle" }}-{{ checksum "gradle.properties" }}
+    v1-jvm-deps-{{ checksum "build.gradle" }}-{{ checksum "server/build.gradle" }}-{{ checksum "grammar/build.gradle" }}-{{ checksum "gradle.properties" }}
 
   npm_cache_key: &npm_cache_key
     v1-nvm-deps-{{ checksum "package.json" }}
