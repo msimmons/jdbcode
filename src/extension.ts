@@ -36,7 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
     installVerticle()
 
     function installVerticle() {
-        let jarFile = context.asAbsolutePath('jdbcode.jar')
+        let jarFile = context.asAbsolutePath('out/jdbcode.jar')
         let config = vscode.workspace.getConfiguration("jdbcode")
         let drivers = config.get('drivers') as Array<object>
         let jarFiles = drivers.map((it) => { return it['jarFile'] }).concat(jarFile)
