@@ -8,14 +8,15 @@ references:
     - v1-jvm-deps-{{ checksum "build.gradle" }}-
     - v1-jvm-deps-
   nvm-cache-keys: &npm_cache_keys
-    - v1-nvm-deps-{{ checksum "package.json" }}
+    - v1-nvm-deps-{{ checksum "package.json" }}-{{ checksum "ui/package.json" }}
+    - v1-nvm-deps-{{ checksum "package.json" }}-
     - v1-nvm-deps-
 
   jvm_cache_key: &jvm_cache_key
     v1-jvm-deps-{{ checksum "build.gradle" }}-{{ checksum "server/build.gradle" }}-{{ checksum "grammar/build.gradle" }}-{{ checksum "gradle.properties" }}
 
   npm_cache_key: &npm_cache_key
-    v1-nvm-deps-{{ checksum "package.json" }}
+    v1-nvm-deps-{{ checksum "package.json" }}-{{ checksum "ui/package.json" }}
 
 jobs:
   build:
@@ -53,6 +54,7 @@ jobs:
           key: *npm_cache_key
           paths:
             - node_modules
+            - ui/node_modules
             - ~/.nvm
       - store_artifacts:
           path: dist
