@@ -130,7 +130,7 @@ class SchemaDescriber {
             val name = indices.getString("INDEX_NAME")
             val unique = !indices.getBoolean("NON_UNIQUE")
             val position = indices.getInt("ORDINAL_POSITION")
-            val column = indices.getString("COLUMN_NAME")
+            val column = indices.getString("COLUMN_NAME") ?: "?"
             val direction = indices.getString("ASC_OR_DESC")
             val filter = indices.getString("FILTER_CONDITION")
             tableData.addIndex(column, IndexData(name, unique, position, direction, filter))
