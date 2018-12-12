@@ -13,16 +13,16 @@ class SchemaDescriber {
         try {
             val catalogRows = connection.metaData.catalogs
             while (catalogRows.next()) {
-                var catalog = SchemaData(catalogRows.getString(1), "catalog")
-                if ( shouldInclude("catalog:${catalog.name}", connectionData) ) {
+                var catalog = SchemaData(catalogRows.getString(1), SchemaType.catalog)
+                if ( shouldInclude("${catalog.type}:${catalog.name}", connectionData) ) {
                     catalog = getObjects(dataSource, catalog)
                     results.add(catalog)
                 }
             }
             val schemaRows = connection.metaData.schemas
             while (schemaRows.next()) {
-                var schema = SchemaData(schemaRows.getString(1), "schema")
-                if ( shouldInclude("schema:${schema.name}", connectionData) ) {
+                var schema = SchemaData(schemaRows.getString(1), SchemaType.schema)
+                if ( shouldInclude("${schema.type}:${schema.name}", connectionData) ) {
                     schema = getObjects(dataSource, schema)
                     results.add(schema)
                 }
@@ -35,7 +35,8 @@ class SchemaDescriber {
     }
 
     private fun shouldInclude(name: String, connectionData: ConnectionData) : Boolean {
-        return (connectionData.includes.contains(name) || connectionData.includes.size == 0) && !connectionData.excludes.contains(name)
+        return (connectionData.includes.any { it.toLowerCase() == name.toLowerCase() } || connectionData.includes.size == 0)
+        && !connectionData.excludes.any { it.toLowerCase() == name.toLowerCase() }
     }
 
     fun getKeywords(dataSource: DataSource) : Collection<String> {
@@ -47,19 +48,18 @@ class SchemaDescriber {
     fun getObjects(dataSource: DataSource, schemaData: SchemaData) : SchemaData {
         val connection = dataSource.connection
         connection.autoCommit = true
-        val catalog = if ( schemaData.type == "catalog" ) schemaData.name else null
-        val schema = if ( schemaData.type == "schema" ) schemaData.name else null
+        val catalog = if ( schemaData.type == SchemaType.catalog ) schemaData.name else null
+        val schema = if ( schemaData.type == SchemaType.schema ) schemaData.name else null
         try {
             // Tables
             val tables = connection.metaData.getTables(catalog, schema, null, null)
             while (tables.next()) {
                 val catalogName: String? = tables.getString("TABLE_CAT")
                 val schemaName: String? = tables.getString("TABLE_SCHEM")
-                val owner = (if (catalogName == null) schemaName else catalogName) ?: "?"
                 val name: String = tables.getString("TABLE_NAME") ?: ""
                 val typeString: String = tables.getString("TABLE_TYPE") ?: ""
                 val type = typeStringToType(typeString)
-                schemaData.addObject(TableData(owner, name, type))
+                schemaData.addObject(TableData(ObjectOwner(schemaName, catalogName), name, type))
             }
             // Procedures
             val procedures = connection.metaData.getProcedures(catalog, schema, null)
@@ -67,10 +67,9 @@ class SchemaDescriber {
             while (procedures.next()) {
                 val catalogName: String? = procedures.getString("PROCEDURE_CAT")
                 val schemaName: String? = procedures.getString("PROCEDURE_SCHEM")
-                val owner = (if (catalogName == null) schemaName else catalogName) ?: "?"
                 val name: String = procedures.getString("PROCEDURE_NAME")
                 val returnsValue: String = returnTypes[procedures.getInt("PROCEDURE_TYPE")]
-                schemaData.addObject(ProcedureData(owner, name, ObjectType.procedure, returnsValue))
+                schemaData.addObject(ProcedureData(ObjectOwner(schemaName, catalogName), name, ObjectType.procedure, returnsValue))
             }
         }
         finally {
@@ -99,9 +98,8 @@ class SchemaDescriber {
     }
 
     private fun describeTable(connection: Connection, objectData: ObjectData) : TableData {
-        val schema = if (objectData.owner.isNullOrEmpty()) null else objectData.owner
         val tableData = TableData(objectData.owner, objectData.name, objectData.type)
-        val columns = connection.metaData.getColumns(null, schema, objectData.name, null)
+        val columns = connection.metaData.getColumns(objectData.owner.catalog, objectData.owner.schema, objectData.name, null)
         while ( columns.next() ) {
             val name = columns.getString("COLUMN_NAME")
             val type = columns.getString("TYPE_NAME")
@@ -113,13 +111,13 @@ class SchemaDescriber {
             val autoincrement = columns.getString("IS_AUTOINCREMENT")
             tableData.columns.add(ColumnData(name, type, dataType, size, default, position, nullable, autoincrement))
         }
-        val pkeys = connection.metaData.getPrimaryKeys(null, objectData.owner, objectData.name)
+        val pkeys = connection.metaData.getPrimaryKeys(null, null, objectData.name)
         while ( pkeys.next() ) {
             val name = pkeys.getString("COLUMN_NAME")
             val seq = pkeys.getInt("KEY_SEQ")
             tableData.addPrimaryKey(name, seq)
         }
-        val fkeys = connection.metaData.getImportedKeys(null, objectData.owner, objectData.name)
+        val fkeys = connection.metaData.getImportedKeys(null, null, objectData.name)
         while ( fkeys.next() ) {
             val owner = fkeys.getString("PKTABLE_SCHEM")
             val name = fkeys.getString("PKTABLE_NAME")
@@ -127,7 +125,7 @@ class SchemaDescriber {
             val fkcolumn = fkeys.getString("FKCOLUMN_NAME")
             tableData.addForeignKey(owner, name, pkcolumn, fkcolumn)
         }
-        val indices = connection.metaData.getIndexInfo(null, objectData.owner, objectData.name, false, false)
+        val indices = connection.metaData.getIndexInfo(objectData.owner.catalog, objectData.owner.schema, objectData.name, false, false)
         while ( indices.next() ) {
             val name = indices.getString("INDEX_NAME")
             val unique = !indices.getBoolean("NON_UNIQUE")
@@ -143,7 +141,7 @@ class SchemaDescriber {
     private fun describeProcedure(connection: Connection, objectData: ObjectData) : ProcedureData {
         val procedureData = ProcedureData(objectData.owner, objectData.name, objectData.type)
         val inOuts = listOf("unknown", "in", "in/out", "result", "out", "return")
-        val params = connection.metaData.getProcedureColumns(null, objectData.owner, objectData.name, null)
+        val params = connection.metaData.getProcedureColumns(objectData.owner.catalog, objectData.owner.schema, objectData.name, null)
         while ( params.next() ) {
             val name = params.getString("COLUMN_NAME")
             val inOut = inOuts[params.getInt("COLUMN_TYPE")]

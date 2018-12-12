@@ -25,7 +25,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
             schema.object_types.forEach((type) => {
                 result = result.concat(type.objects.forEach((obj) => {
                     let item = new vscode.CompletionItem(obj.name, CompletionItemKind.Class)
-                    item.detail = obj.owner
+                    item.detail = obj.owner.catalog ? obj.owner.catalog : obj.owner.schema
                     if (type.name === 'table') {
                         this.tableItems.push(item)
                     }
@@ -99,7 +99,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         } else {
             tableItem = item.tableMap[item.tableAlias]
         }
-        obj.owner = tableItem.owner
+        obj.owner = { catalog: null, schema: tableItem.owner }
         obj.name = tableItem.name
         obj.type = 'table'
         let described = doDescribe(obj)

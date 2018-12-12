@@ -225,7 +225,8 @@ export function activate(context: vscode.ExtensionContext) {
      */
     let findObject = vscode.commands.registerCommand("jdbcode.find", (dbObject) => {
         let items = getSchemaObjects().map((obj) => {
-            return {label: `${obj.owner}.${obj.name}`, description: obj.type, item: obj}
+            let ownerString = getOwnerString(obj.owner)
+            return {label: `${ownerString}.${obj.name}`, description: obj.type, item: obj}
         })
         vscode.window.showQuickPick(items).then((choice) => {
             if ( !choice ) return
@@ -248,7 +249,7 @@ export function activate(context: vscode.ExtensionContext) {
      * Show the description view of the given schema object
      */
     let describe = vscode.commands.registerCommand("jdbcode.describe", (dbObject) => {
-        let docName = dbObject.owner+'.'+dbObject.name
+        let docName = getOwnerString(dbObject.owner)+'.'+dbObject.name
         let uri = Uri.parse(schemaContentProvider.scheme + '://' + docName)
         jvmcode.send('jdbcode.describe', { connection: currentConnection, dbObject: dbObject }).then((reply) => {
             dbObject = reply.body
@@ -259,6 +260,10 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.showErrorMessage('Error describing object: ' + error.message)
         })
     })
+
+    function getOwnerString(owner: any) {
+        return owner.catalog ? owner.catalog : owner.schema
+    }
 
     context.subscriptions.push(
         addDriver, addConnection, connect, execute, disconnect,

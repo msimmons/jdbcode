@@ -36,7 +36,7 @@ export class SchemaType implements TreeNode {
 }
 
 export class SchemaObject implements TreeNode {
-    owner: string
+    owner: any
     name: string
     type: string
     connection: string

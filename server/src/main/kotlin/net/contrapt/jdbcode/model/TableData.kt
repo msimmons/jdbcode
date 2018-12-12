@@ -1,7 +1,7 @@
 package net.contrapt.jdbcode.model
 
 data class TableData (
-        override val owner: String = "",
+        override val owner: ObjectOwner = ObjectOwner(null, null),
         override val name: String = "",
         override val type: ObjectType = ObjectType.table,
         val columns: MutableSet<ColumnData> = mutableSetOf(),

@@ -2,7 +2,7 @@ package net.contrapt.jdbcode.model
 
 data class SchemaData(
         val name: String = "",
-        val type: String = "",
+        val type: SchemaType = SchemaType.schema,
         var resolved: Boolean = false,
         val object_types: MutableSet<TypeData> = mutableSetOf(),
         var error: String? = null
