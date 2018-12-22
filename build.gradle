@@ -13,7 +13,7 @@ buildscript {
 group 'net.contrapt'
 version '1.0-SNAPSHOT'
 
-subprojects {
+configure([project(':server'), project(':grammar')]) {
     apply plugin: 'kotlin'
 
     compileKotlin {

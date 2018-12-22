@@ -32,11 +32,6 @@ open class JDBCVerticleTest {
         }
     }
 
-    @After
-    fun after(context: TestContext) {
-    }
-
-
     @Test
     fun testConnect(context: TestContext) {
         val connection = ConnectionData()
@@ -45,7 +40,7 @@ open class JDBCVerticleTest {
                 .put("connection", JsonObject.mapFrom(connection))
                 .put("driver", JsonObject.mapFrom(driver))
         `when`(mockConnectionService.connect(connection, driver)).thenReturn(ConnectionData().apply { schemas.add(SchemaData("name", SchemaType.schema)) })
-        rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess(){ id ->
+        rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess(){ _ ->
             rule.vertx().eventBus().send("jdbcode.connect", message, context.asyncAssertSuccess<Message<JsonObject>>() { result ->
                 verify(mockConnectionService, times(1)).connect(connection, driver)
                 context.assertTrue(result.body().containsKey("schemas"))
@@ -62,7 +57,7 @@ open class JDBCVerticleTest {
                 .put("connection", JsonObject.mapFrom(connection))
                 .put("driver", JsonObject.mapFrom(driver))
         `when`(mockConnectionService.connect(connection, driver)).thenThrow(RuntimeException("throwing"))
-        rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess(){ id ->
+        rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess(){ _ ->
             rule.vertx().eventBus().send("jdbcode.connect", message, context.asyncAssertFailure<Message<JsonObject>>() { result ->
                 context.assertNotNull(result.message, "Should have an error result")
             })
@@ -75,7 +70,7 @@ open class JDBCVerticleTest {
         `when`(mockConnectionService.execute(sqlStatement)).thenReturn(sqlStatement)
         val message = JsonObject.mapFrom(sqlStatement)
 
-        rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess() { id ->
+        rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess() { _ ->
             rule.vertx().eventBus().send("jdbcode.execute", message, context.asyncAssertSuccess<Message<JsonObject>>() { result ->
                 verify(mockConnectionService, times(1)).execute(sqlStatement)
                 context.assertEquals(message, result.body())
@@ -88,8 +83,8 @@ open class JDBCVerticleTest {
         val connection = ConnectionData()
         val message = JsonObject.mapFrom(connection)
 
-        rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess(){ id ->
-            rule.vertx().eventBus().send("jdbcode.disconnect", message, context.asyncAssertSuccess<Message<JsonObject>>() { id ->
+        rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess(){ _ ->
+            rule.vertx().eventBus().send("jdbcode.disconnect", message, context.asyncAssertSuccess<Message<JsonObject>>() { _ ->
                 verify(mockConnectionService, times(1)).disconnect(connection)
             })
         })
