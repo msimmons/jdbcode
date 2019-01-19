@@ -7,7 +7,6 @@ import net.contrapt.jdbcode.model.StatementStatus
 import net.contrapt.jdbcode.model.StatementType
 import java.io.InputStream
 import java.io.Reader
-import java.lang.Exception
 import java.math.BigDecimal
 import java.net.URL
 import java.sql.*
@@ -162,6 +161,8 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
                 is InputStream -> "inputStream"
                 is BigDecimal -> value.toDouble()
                 is Blob -> Base64.getEncoder().encodeToString(value.getBytes(0, value.length().toInt()))
+                is Clob -> value.getSubString(0, value.length().toInt())
+                is NClob -> value.getSubString(0, value.length().toInt())
                 is ByteArray -> Base64.getEncoder().encodeToString(value)
                 is Reader -> value.readText()
                 is Date -> formatDateTime(value)
