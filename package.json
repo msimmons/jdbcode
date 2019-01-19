@@ -125,6 +125,10 @@
                 "type": "integer",
                 "default": 500
               },
+              "maxPoolSize": {
+                "type": "integer",
+                "default": 30
+              },
               "autoCommit": {
                 "type": "boolean",
                 "default": false

@@ -22,6 +22,10 @@ open class ConnectionService {
             username = connection.username
             password = connection.password
             poolName = connection.name
+            idleTimeout = 30000
+            maxLifetime = 60000
+            maximumPoolSize = connection.maxPoolSize
+            minimumIdle = 1
             addDataSourceProperty("applicationName", "jdbcode")
         }
         configs.put(connection.name, connection)

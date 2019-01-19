@@ -8,6 +8,7 @@ data class ConnectionData(
         var validationQuery: String = "",
         var fetchLimit: Int = 500,
         var autoCommit: Boolean = false,
+        var maxPoolSize: Int = 30,
         var includes: Set<String> = setOf(),
         var excludes: Set<String>  = setOf(),
         var schemas: MutableSet<SchemaData> = mutableSetOf(),
