@@ -13,6 +13,7 @@ import java.sql.*
 import java.sql.Date
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.min
 import kotlin.system.measureTimeMillis
 
 class StatementExecutor(val config: ConnectionData, val connection: Connection, val sqlStatement: SqlStatement) {
@@ -149,7 +150,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
      * Convert column value to one appropriate for serializing as JSON to client; that is basically native types
      * and String values
      *
-     * Should we limit size of blobish things?
+     * Currently limiting blob, clob to 4000 bytes/chars
      */
     private fun convertValue(row: ResultSet?, column: Int): Any? {
         if ( row == null ) return ""
@@ -160,9 +161,9 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
                 is Array<*> -> value.joinToString(",", "[", "]") { it.toString() }
                 is InputStream -> "inputStream"
                 is BigDecimal -> value.toDouble()
-                is Blob -> Base64.getEncoder().encodeToString(value.getBytes(0, value.length().toInt()))
-                is Clob -> value.getSubString(0, value.length().toInt())
-                is NClob -> value.getSubString(0, value.length().toInt())
+                is Blob -> Base64.getEncoder().encodeToString(value.getBytes(1, min(value.length().toInt(), 4000)))
+                is Clob -> value.getSubString(1, min(value.length().toInt(), 4000))
+                is NClob -> value.getSubString(1, min(value.length().toInt(), 4000))
                 is ByteArray -> Base64.getEncoder().encodeToString(value)
                 is Reader -> value.readText()
                 is Date -> formatDateTime(value)
