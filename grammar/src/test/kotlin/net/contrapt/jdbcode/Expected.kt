@@ -1,5 +1,6 @@
 package net.contrapt.jdbcode
 
+import net.contrapt.jdbcode.model.Item
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import kotlin.reflect.KClass

@@ -11,7 +11,7 @@ var vm = new Vue({
             <th nowrap class="results">null?</th>
         </thead>
         <tbody>
-            <tr v-for="param in dbObject.params">
+            <tr v-for="param in dbObject.resolved.params">
                 <td nowrap class="results">{{param.name}}</td>
                 <td nowrap class="results">{{param.type}}</td>
                 <td nowrap class="results">{{param.inOut}}</td>

@@ -164,11 +164,12 @@ class SchemaDescriber {
     }
 
     private fun typeStringToType(typeString: String) : ObjectType {
-        if ( typeString.toLowerCase().contains("table")) return ObjectType.table
-        if ( typeString.toLowerCase().contains("index")) return ObjectType.index
-        if ( typeString.toLowerCase().contains("view")) return ObjectType.view
-        if ( typeString.toLowerCase().contains("sequence")) return ObjectType.sequence
-        return ObjectType.unkown
+        try {
+            return ObjectType.valueOf(typeString.toLowerCase())
+        }
+        catch (e: IllegalArgumentException) {
+            return ObjectType.unknown
+        }
     }
 
 }

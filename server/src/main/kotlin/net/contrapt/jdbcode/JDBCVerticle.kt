@@ -80,7 +80,7 @@ class JDBCVerticle() : AbstractVerticle() {
                     val result = connectionService.reexecute(id)
                     future.complete(JsonObject.mapFrom(result))
                 } catch (e: Exception) {
-                    logger.error("Refreshing sql statement", e)
+                    logger.error("Re-executing sql statement", e)
                     future.fail(e)
                 }
             }, false, Handler<AsyncResult<JsonObject>> { ar ->

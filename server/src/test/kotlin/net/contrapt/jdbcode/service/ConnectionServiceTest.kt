@@ -16,7 +16,7 @@ class ConnectionServiceTest {
             service.objects(connection, s)
         }
         val schema = connectionData.schemas.find { it.name == "INFORMATION_SCHEMA" }
-        schema?.object_types?.forEach {
+        schema?.objectTypes?.forEach {
             it.objects.forEach {
                 service.describe(connection, it)
             }

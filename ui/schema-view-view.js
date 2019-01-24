@@ -9,7 +9,7 @@ var vm = new Vue({
             <th nowrap class="results">size</th>
         </thead>
         <tbody>
-            <tr v-for="column in dbObject.columns">
+            <tr v-for="column in dbObject.resolved.columns">
                 <td nowrap class="results">{{column.name}}</td>
                 <td nowrap class="results">{{column.type}}</td>
                 <td nowrap class="results">{{column.size}}</td>

@@ -1,5 +1,6 @@
 package net.contrapt.jdbcode
 
+import net.contrapt.jdbcode.model.*
 import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.atn.ATNConfigSet
 import org.antlr.v4.runtime.dfa.DFA
@@ -9,7 +10,7 @@ import java.util.*
 class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
 
     /** A stack of scopes for mapping aliases to tables, handles sub-selects */
-    val tableScopes = Stack<MutableMap<String, Item.TableItem>>()
+    val tableScopes = Stack<MutableMap<String, TableItem>>()
 
     /** Set of items with locations */
     val itemLocations = mutableSetOf<Item>()
@@ -55,8 +56,8 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
 
     fun getCaretItem(char: Int) : Item {
         return itemLocations.find {
-            it.range.start <= char && it.range.stop >= char && !(it is Item.NullItem)
-        } ?: syntaxError ?: Item.NullItem(TokenRange(0, 0, 0, char))
+            it.range.start <= char && it.range.stop >= char && !(it is NullItem)
+        } ?: syntaxError ?: NullItem(TokenRange(0, 0, 0, char))
     }
 
     override fun enterStatement(ctx: SqlJParser.StatementContext) {
@@ -68,25 +69,25 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
     }
 
     override fun exitTable_list(ctx: SqlJParser.Table_listContext) {
-        itemLocations.add(Item.TableList(getLocation(ctx, true), tableScopes.peek()))
+        itemLocations.add(TableList(getLocation(ctx, true), tableScopes.peek()))
     }
 
     override fun exitSelect_list(ctx: SqlJParser.Select_listContext) {
-        itemLocations.add(Item.SelectList(getLocation(ctx, true), tableScopes.peek()))
+        itemLocations.add(SelectList(getLocation(ctx, true), tableScopes.peek()))
     }
 
     override fun exitTable_item(ctx: SqlJParser.Table_itemContext) {
         val name = ctx.table_expr()?.table_name()?.text ?: ""
         val owner = ctx.table_expr()?.owner_name()?.text ?: ""
         val alias = ctx.alias_name()?.text ?: name
-        val item = Item.TableItem(getLocation(ctx), owner, name, alias)
+        val item = TableItem(getLocation(ctx), owner, name, alias)
         tableScopes.peek().put(alias, item)
     }
 
     override fun exitTable_expr(ctx: SqlJParser.Table_exprContext) {
         val name = ctx.table_name()?.text ?: ""
         val owner = ctx.owner_name()?.text ?: ""
-        val item = Item.TableItem(getLocation(ctx), owner, name, name)
+        val item = TableItem(getLocation(ctx), owner, name, name)
         itemLocations.add(item)
         if (ctx.parent !is SqlJParser.Table_itemContext) tableScopes.peek().put(name, item)
     }
@@ -94,7 +95,7 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
     override fun exitColumn_expr(ctx: SqlJParser.Column_exprContext) {
         val tableAlias = ctx.alias_name()?.text ?: ""
         val name = ctx.column_name()?.text ?: ""
-        val item = Item.ColumnExpr(getLocation(ctx), tableAlias, name, tableScopes.peek())
+        val item = ColumnExpr(getLocation(ctx), tableAlias, name, tableScopes.peek())
         itemLocations.add(item)
     }
 
@@ -103,7 +104,7 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
 
     override fun syntaxError(recognizer: Recognizer<*, *>?, offendingSymbol: Any?, line: Int, charPositionInLine: Int, msg: String?, e: RecognitionException?) {
         val expected = msg?.split(",")?.toList() ?: emptyList()
-        syntaxError = Item.SyntaxError(TokenRange(0, 0, line, charPositionInLine), expected)
+        syntaxError = SyntaxError(TokenRange(0, 0, line, charPositionInLine), expected)
     }
 
     override fun reportAmbiguity(recognizer: Parser?, dfa: DFA?, startIndex: Int, stopIndex: Int, exact: Boolean, ambigAlts: BitSet?, configs: ATNConfigSet?) {

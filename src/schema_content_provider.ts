@@ -6,7 +6,7 @@ import { resolve } from 'path';
 import { Uri } from 'vscode';
 import { Event } from 'vscode';
 import { TextDocument } from 'vscode';
-import { SchemaObject, ObjectDescription } from './models'
+import { ObjectNode, ObjectDescription } from './models'
 
 export class SchemaContentProvider implements vscode.TextDocumentContentProvider {
 
@@ -27,10 +27,10 @@ export class SchemaContentProvider implements vscode.TextDocumentContentProvider
     /**
      * Update the view based on the given schema object
      * @param uri The uri to update
-     * @param dbObject The object to view
+     * @param objectNode The object to view
      */
-    update(uri: Uri, dbObject: SchemaObject) {
-        this.descriptions[uri.authority] = {dbObject: dbObject, html: this.getSchemaHtml(dbObject)}
+    update(uri: Uri, objectNode: ObjectNode) {
+        this.descriptions[uri.authority] = {dbObject: objectNode, html: this.getSchemaHtml(objectNode)}
         this.onDidChangeEmitter.fire(uri);
     }
 
@@ -80,8 +80,8 @@ export class SchemaContentProvider implements vscode.TextDocumentContentProvider
         return vscode.Uri.file(this.context.asAbsolutePath('ui/'+fileName))
     }
 
-    private getSchemaHtml(dbObject: SchemaObject) : string {
-        let view = dbObject ? `schema-${dbObject.type}-view.js` : ''
+    private getSchemaHtml(dbObject: ObjectNode) : string {
+        let view = dbObject ? `schema-${dbObject.data.type}-view.js` : ''
         let viewUri = this.getScriptUri(view)
         return `
         <html>

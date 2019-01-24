@@ -7,5 +7,5 @@ enum class ObjectType {
     procedure,
     function,
     sequence,
-    unkown
+    unknown
 }

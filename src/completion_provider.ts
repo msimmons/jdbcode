@@ -1,7 +1,8 @@
 import * as vscode from 'vscode'
 import { CompletionItemKind } from 'vscode';
-import { SchemaData, SchemaObject } from './models'
-import { doDescribe, trimSql } from './extension'
+import { trimSql } from './extension'
+import { DatabaseService } from './database_service';
+import { TableData } from 'server-models';
 
 export class CompletionProvider implements vscode.CompletionItemProvider {
 
@@ -12,26 +13,28 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         new vscode.CompletionItem('delete', vscode.CompletionItemKind.Keyword)
     ]
 
-    private schemaData: SchemaData[]
     private schemaItems: vscode.CompletionItem[] = []
     private tableItems: vscode.CompletionItem[] = []
-    private jvmcode: any = vscode.extensions.getExtension('contrapt.jvmcode').exports
+    private service: DatabaseService
 
-    setSchemas(schemas: SchemaData[]) {
-        this.schemaData = schemas
-        let result = []
-        schemas.forEach((schema) => {
-            this.schemaItems.push(new vscode.CompletionItem(schema.name, CompletionItemKind.Module))
-            schema.object_types.forEach((type) => {
-                result = result.concat(type.objects.forEach((obj) => {
-                    let item = new vscode.CompletionItem(obj.name, CompletionItemKind.Class)
-                    item.detail = obj.owner.catalog ? obj.owner.catalog : obj.owner.schema
-                    if (type.name === 'table') {
-                        this.tableItems.push(item)
-                    }
-                }))
-            })
-        })
+    constructor(service: DatabaseService) {
+        this.service = service
+    }
+
+    updateSchemas() {
+        // let result = []
+        // this.service.getSchemaNodes().forEach((schema) => {
+        //     this.schemaItems.push(new vscode.CompletionItem(schema.name, CompletionItemKind.Module))
+        //     schema.typeNodes.forEach((type) => {
+        //         result = result.concat(type.objects.forEach((obj) => {
+        //             let item = new vscode.CompletionItem(obj.name, CompletionItemKind.Class)
+        //             item.detail = obj.owner.catalog ? obj.owner.catalog : obj.owner.schema
+        //             if (type.name === 'table') {
+        //                 this.tableItems.push(item)
+        //             }
+        //         }))
+        //     })
+        // })
     }
 
     setKeywords(keywords: string[]) {
@@ -51,9 +54,8 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         return this.getCompletionItems(sql, caretOffset)
     }
 
-    private async getCompletionItems(sql, caretOffset) {
-        let result = await this.jvmcode.send('jdbcode.parse', {sql: sql, char: caretOffset})
-        let item = result.body
+    private async getCompletionItems(sql: string, caretOffset: number) {
+        let item = await this.service.parse(sql, caretOffset)
         switch (item.type) {
             case 'column_expr':
                 return this.getColumnItems(item)
@@ -70,14 +72,20 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         }
     }
 
+    /**
+     * We expect SQL statements to be separated by a ';' or an empty line, this is the easiest way to pick them out
+     * as you are typing.  This method figures out where the sql statement starts and ends based on those assumptions
+     * @param position The current cursor position
+     * @param document The document you are editing
+     */
     private getSqlRange(position: vscode.Position, document: vscode.TextDocument) : vscode.Range {
-        // Search forwards for empty line or semicolon line ending
+        // Search forwards for empty line, semicolon line ending or end of document
         let endLine
-        for (endLine = position.line; endLine < document.lineCount; endLine++) {
+        for (endLine = position.line; endLine < document.lineCount-1; endLine++) {
             if (!document.lineAt(endLine+1).text) break
             if (document.lineAt(endLine).text.endsWith(';')) break
         }
-        // Search backwards for empty line or semicolon
+        // Search backwards for empty line, semicolon or beginning of document
         let startLine
         for (startLine = position.line; startLine > 0; startLine--) {
             if (!document.lineAt(startLine-1).text) break
@@ -88,8 +96,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         return new vscode.Range(start, end)
     }
 
-    private getColumnItems(item: any): Promise<vscode.CompletionItem[]> {
-        let obj = new SchemaObject()
+    private async getColumnItems(item: any): Promise<vscode.CompletionItem[]> {
         let tableItem = {owner: '', name: ''}
         if (!item.tableAlias) {
             for (var key in item.tableMap) {
@@ -99,23 +106,17 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         } else {
             tableItem = item.tableMap[item.tableAlias]
         }
-        obj.owner = { catalog: null, schema: tableItem.owner }
-        obj.name = tableItem.name
-        obj.type = 'table'
-        let described = doDescribe(obj)
-        return new Promise<vscode.CompletionItem[]>((resolve, reject) => {
-            described.then((reply) => {
-                let columnItems = reply.columns.map(column => {
-                    let ci = new vscode.CompletionItem(column.name, vscode.CompletionItemKind.Field)
-                    ci.detail = obj.name
-                    return ci
-                })
-                resolve(columnItems)
-            }).catch((error) => {
-                console.log(error.message)
-                resolve([])
-            })
+        let described = await this.service.describeByName(tableItem.owner, tableItem.name)
+        let tableData = described.resolved as TableData
+        return tableData.columns.map((c) => {
+            let ci = new vscode.CompletionItem(c.name, vscode.CompletionItemKind.Field)
+            ci.detail = described.name
+            return ci
         })
+    }
+
+    private getTableItems(item: any) : vscode.CompletionItem[] {
+        return []
     }
 
 }
