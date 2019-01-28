@@ -1,42 +1,45 @@
 package net.contrapt.jdbcode
 
-import net.contrapt.jdbcode.model.Item
+import net.contrapt.jdbcode.model.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import kotlin.reflect.KClass
 
-sealed class Expected<T: Item>(val col: Int, val klass: KClass<T>) {
+sealed class Expected<T: ParseItem>(val col: Int, val klass: KClass<T>) {
 
-    fun test(item: Item) {
-        return when (item) {
-            is Item.NullItem -> testNullItem(item)
-            is Item.ColumnExpr -> testColumnExpr(item)
-            is Item.SelectList -> testSelectList(item)
-            is Item.TableList -> testTableList(item)
-            is Item.TableItem -> testTableItem(item)
-            is Item.SyntaxError -> testSyntaxError(item)
+    fun test(parseItem: ParseItem) {
+        return when (parseItem) {
+            is NullItem -> testNullItem(parseItem)
+            is ColumnExpr -> testColumnExpr(parseItem)
+            is ValueExpr -> testValueExpr(parseItem)
+            is SelectList -> testSelectList(parseItem)
+            is TableList -> testTableList(parseItem)
+            is TableItem -> testTableItem(parseItem)
+            is SyntaxError -> testSyntaxError(parseItem)
         }
     }
 
-    open protected val testNullItem: (Item.NullItem) -> Unit = {assertClass(it)}
-    open protected val testColumnExpr: (Item.ColumnExpr) -> Unit = {assertClass(it)}
-    open protected val testSelectList: (Item.SelectList) -> Unit = {assertClass(it)}
-    open protected val testTableList: (Item.TableList) -> Unit = {assertClass(it)}
-    open protected val testTableItem: (Item.TableItem) -> Unit = {assertClass(it)}
-    open protected val testSyntaxError: (Item.SyntaxError) -> Unit = {assertClass(it)}
+    open protected val testNullItem: (NullItem) -> Unit = {assertClass(it)}
+    open protected val testColumnExpr: (ColumnExpr) -> Unit = {assertClass(it)}
+    open protected val testValueExpr: (ValueExpr) -> Unit = {assertClass(it)}
+    open protected val testSelectList: (SelectList) -> Unit = {assertClass(it)}
+    open protected val testTableList: (TableList) -> Unit = {assertClass(it)}
+    open protected val testTableItem: (TableItem) -> Unit = {assertClass(it)}
+    open protected val testSyntaxError: (SyntaxError) -> Unit = {assertClass(it)}
 
-    private fun assertClass(item: Item?) {
-        when (item) {
+    private fun assertClass(parseItem: ParseItem?) {
+        when (parseItem) {
             null -> assertTrue("Expected $klass got null at $col", false)
-            else -> assertEquals("Expected class at $col", klass, item::class)
+            else -> assertEquals("Expected class at $col", klass, parseItem::class)
         }
     }
 
-    class NullItem(col: Int, override val testNullItem: (Item?) -> Unit) : Expected<Item>(col, Item::class)
-    class ColumnExpr(col: Int, override val testColumnExpr: (Item.ColumnExpr) -> Unit) : Expected<Item.ColumnExpr>(col, Item.ColumnExpr::class)
-    class SelectList(col: Int, override val testSelectList: (Item.SelectList) -> Unit) : Expected<Item.SelectList>(col, Item.SelectList::class)
-    class TableList(col: Int, override val testTableList: (Item.TableList) -> Unit) : Expected<Item.TableList>(col, Item.TableList::class)
-    class TableItem(col: Int, override val testTableItem: (Item.TableItem) -> Unit) : Expected<Item.TableItem>(col, Item.TableItem::class)
+    class ENullItem(col: Int, override val testNullItem: (ParseItem?) -> Unit) : Expected<ParseItem>(col, ParseItem::class)
+    class EColumnExpr(col: Int, override val testColumnExpr: (ColumnExpr) -> Unit) : Expected<ColumnExpr>(col, ColumnExpr::class)
+    class EValueExpr(col: Int, override val testValueExpr: (ValueExpr) -> Unit) : Expected<ValueExpr>(col, ValueExpr::class)
+    class ESelectList(col: Int, override val testSelectList: (SelectList) -> Unit) : Expected<SelectList>(col, SelectList::class)
+    class ETableList(col: Int, override val testTableList: (TableList) -> Unit) : Expected<TableList>(col, TableList::class)
+    class ETableItem(col: Int, override val testTableItem: (TableItem) -> Unit) : Expected<TableItem>(col, TableItem::class)
 
 
 }

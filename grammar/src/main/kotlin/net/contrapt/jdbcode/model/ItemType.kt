@@ -6,5 +6,6 @@ enum class ItemType {
     SELECT_LIST,
     TABLE_ITEM,
     COLUMN_EXPR,
+    VALUE_EXPR,
     SYNTAX_ERROR
 }

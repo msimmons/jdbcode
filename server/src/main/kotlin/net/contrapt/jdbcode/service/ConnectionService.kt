@@ -13,7 +13,7 @@ open class ConnectionService {
     private val statements = mutableMapOf<String, StatementExecutor>()
     private val schemaDesriber = SchemaDescriber()
 
-    open fun connect(connection: ConnectionData, driver: DriverData) : ConnectionData {
+    open fun connect(connection: ConnectionData, driver: DriverData) : ConnectionResult {
         if ( dataSources.containsKey(connection.name)) disconnect(connection)
         val dataSource = HikariDataSource().apply {
             //dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
@@ -30,9 +30,22 @@ open class ConnectionService {
         }
         configs.put(connection.name, connection)
         dataSources.put(connection.name, dataSource)
-        connection.schemas.addAll(schemaDesriber.getSchemas(connection, dataSource))
-        connection.keywords.addAll(schemaDesriber.getKeywords(dataSource))
-        return connection
+        val result = ConnectionResult()
+        result.schemas.addAll(schemaDesriber.getSchemas(connection, dataSource))
+        result.keywords.addAll(schemaDesriber.getKeywords(dataSource))
+        return result
+    }
+
+    /**
+     * Refresh the schema info for the given connection
+     */
+    fun refresh(connection: ConnectionData) : ConnectionResult {
+        val dataSource = dataSources[connection.name]
+        if ( dataSource == null) throw IllegalStateException("No data source found for ${connection.name}")
+        val result = ConnectionResult()
+        result.schemas.addAll(schemaDesriber.getSchemas(connection, dataSource))
+        result.keywords.addAll(schemaDesriber.getKeywords(dataSource))
+        return result
     }
 
     open fun disconnect(connection: ConnectionData) {

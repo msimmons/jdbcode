@@ -1,5 +1,4 @@
 apply plugin: 'antlr'
-apply plugin: net.contrapt.kt2ts.Kt2TsPlugin
 
 dependencies {
     antlr "org.antlr:antlr4:$antlr_version"
@@ -9,4 +8,4 @@ generateGrammarSource {
     arguments += ['-lib', 'src/main/antlr/net/contrapt/jdbcode']
 }
 
-build.dependsOn = ['generateGrammarSource']
+build.dependsOn += 'generateGrammarSource'

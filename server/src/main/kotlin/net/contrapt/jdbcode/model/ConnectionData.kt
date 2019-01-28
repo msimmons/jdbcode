@@ -2,6 +2,7 @@ package net.contrapt.jdbcode.model
 
 data class ConnectionData(
         var name: String = "",
+        var driver: String = "",
         var url: String = "",
         var username: String = "",
         var password: String = "",
@@ -10,8 +11,5 @@ data class ConnectionData(
         var autoCommit: Boolean = false,
         var maxPoolSize: Int = 30,
         var includes: Set<String> = setOf(),
-        var excludes: Set<String>  = setOf(),
-        var schemas: MutableSet<SchemaData> = mutableSetOf(),
-        var keywords: MutableSet<String> = mutableSetOf(),
-        var error: String? = null
+        var excludes: Set<String>  = setOf()
 )

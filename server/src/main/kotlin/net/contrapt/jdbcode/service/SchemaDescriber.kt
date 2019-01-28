@@ -92,7 +92,7 @@ class SchemaDescriber {
                 ObjectType.sequence -> describeTable(connection, objectData)
                 ObjectType.index -> describeTable(connection, objectData)
                 ObjectType.procedure -> describeProcedure(connection, objectData)
-                else -> throw IllegalArgumentException("Unknown object type ${objectData.type}")
+                else -> objectData
             }
         }
         finally {
@@ -163,13 +163,15 @@ class SchemaDescriber {
         return procedureData
     }
 
+    /**
+     * Sometimes tables indices and views have funny names like SYSTEM TABLE, so this takes care of that
+     */
     private fun typeStringToType(typeString: String) : ObjectType {
-        try {
-            return ObjectType.valueOf(typeString.toLowerCase())
-        }
-        catch (e: IllegalArgumentException) {
-            return ObjectType.unknown
-        }
+        if ( typeString.toLowerCase().contains("table")) return ObjectType.table
+        if ( typeString.toLowerCase().contains("index")) return ObjectType.index
+        if ( typeString.toLowerCase().contains("view")) return ObjectType.view
+        if ( typeString.toLowerCase().contains("sequence")) return ObjectType.sequence
+        return ObjectType.unknown
     }
 
 }

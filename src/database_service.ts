@@ -2,13 +2,14 @@
 
 import * as vscode from 'vscode'
 import { SchemaNode, TypeNode, ObjectNode, SqlStatement } from './models';
-import { SchemaData, ConnectionData, DriverData } from 'server-models';
+import { SchemaData, ConnectionData, DriverData, ConnectionResult, Item } from 'server-models';
 
 export class DatabaseService {
 
     private context: vscode.ExtensionContext
     private jvmcode: any
     private schemaNodes: SchemaNode []
+    private objectMap: Map<string, ObjectNode[]> = new Map()
     private currentConnection?: ConnectionData
 
     constructor(context: vscode.ExtensionContext) {
@@ -25,28 +26,40 @@ export class DatabaseService {
      */
     public async connect(connection: ConnectionData, driver: DriverData) {
         let reply = await this.jvmcode.send('jdbcode.connect', { connection: connection, driver: driver })
-        let data = reply.body as ConnectionData
+        let data = reply.body as ConnectionResult
         this.currentConnection = connection
-        this.schemaNodes = data.schemas.map((s) => { 
-            let schema = new SchemaNode(s)
-            schema.typeNodes = schema.data.objectTypes.map((ot) => {
-                let tn = new TypeNode(ot)
-                tn.objects = tn.data.objects.map((o) => {
-                    return new ObjectNode(o)
-                })
-                return tn
-            })
-            schema.resolved = true
-            return schema
-        })
+        this.mapSchemaNodes(data)
     }
 
     /**
      * Refresh the current connection getting new schema data etc
      */
     public async refresh() {
-        let reply = await this.jvmcode.send('jdbcode.refresh', {})
-        this.schemaNodes = reply
+        let reply = await this.jvmcode.send('jdbcode.refresh', {connection: this.currentConnection})
+        this.mapSchemaNodes(reply.body as ConnectionResult)
+    }
+
+    /**
+     * Turn the ConnectionResult into SchemaNodes
+     * @param data 
+     */
+    private mapSchemaNodes(data: ConnectionResult) {
+        this.objectMap.clear()
+        this.schemaNodes = data.schemas.map((s) => { 
+            let schema = new SchemaNode(s)
+            schema.typeNodes = schema.data.objectTypes.map((ot) => {
+                let tn = new TypeNode(ot)
+                tn.objects = tn.data.objects.map((o) => {
+                    let on = new ObjectNode(o)
+                    if (!this.objectMap.has(o.name)) this.objectMap.set(o.name, [])
+                    this.objectMap.get(o.name).push(on)
+                    return  on
+                })
+                return tn
+            })
+            schema.resolved = true
+            return schema
+        })
     }
 
     /**
@@ -64,16 +77,10 @@ export class DatabaseService {
      * @param name
      */
     public async describeByName(namespace: string, name: string) : Promise<ObjectNode> {
-        let node: ObjectNode
-        let schema = this.schemaNodes.find((s) => {
-            return s.name === namespace
-        })
-        for (let tn of schema.typeNodes) {
-            node = tn.objects.find((o) => {
-                return o.name === name
-            })
-            if (node) break
-        }
+        let nodes = this.objectMap.get(name)
+        if (!nodes) return undefined
+        let node = nodes.find(n => n.data.owner.catalog === namespace || n.data.owner.schema === namespace)
+        if (!node) node = nodes[0]
         return this.describe(node)
     }
 
@@ -137,7 +144,7 @@ export class DatabaseService {
     /**
      * Parse the given SQL and returning item expcted at cursor
      */
-    public async parse(sql: string, offset: number) : Promise<any> {
+    public async parse(sql: string, offset: number) : Promise<Item> {
         let reply = await this.jvmcode.send('jdbcode.parse', {sql: sql, char: offset})
         return reply.body
     }

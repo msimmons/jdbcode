@@ -13,10 +13,10 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
     val tableScopes = Stack<MutableMap<String, TableItem>>()
 
     /** Set of items with locations */
-    val itemLocations = mutableSetOf<Item>()
+    val itemLocations = mutableSetOf<ParseItem>()
 
     /** Error item if applicable */
-    var syntaxError: Item? = null
+    var syntaxError: ParseItem? = null
 
     fun parse(sql: String) {
         val input = ANTLRInputStream(sql)
@@ -54,7 +54,7 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
         return getLocation(ctx, false)
     }
 
-    fun getCaretItem(char: Int) : Item {
+    fun getCaretItem(char: Int) : ParseItem {
         return itemLocations.find {
             it.range.start <= char && it.range.stop >= char && !(it is NullItem)
         } ?: syntaxError ?: NullItem(TokenRange(0, 0, 0, char))
@@ -96,6 +96,12 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
         val tableAlias = ctx.alias_name()?.text ?: ""
         val name = ctx.column_name()?.text ?: ""
         val item = ColumnExpr(getLocation(ctx), tableAlias, name, tableScopes.peek())
+        itemLocations.add(item)
+    }
+
+    override fun exitValue_expr(ctx: SqlJParser.Value_exprContext) {
+        if (ctx.parent is SqlJParser.Select_itemContext) return
+        val item = ValueExpr(getLocation(ctx, true), tableScopes.peek())
         itemLocations.add(item)
     }
 

@@ -57,7 +57,7 @@ export class DatabaseController {
         vscode.window.registerTreeDataProvider(this.schemaTreeProvider.viewId, this.schemaTreeProvider)
     }
 
-    async connect(connection: any, driver: any, command?: string) {
+    async connect(connection: ConnectionData, driver: DriverData, command?: string) {
         // Close any existing result sets (just in case)
         this.resultSetPanels.forEach((panel) => {
             panel.close()
@@ -84,13 +84,30 @@ export class DatabaseController {
     }
 
     /**
+     * Refresh the current connection (reload the schemas etc)
+     */
+    async refresh() {
+        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Refreshing DB" }, async (progress) => {
+            progress.report({ message: `Refreshing  ${this.service.getConnection().name}` })
+            try {
+                await this.service.refresh()
+                this.schemaTreeProvider.clear()
+            }
+            catch (error) {
+                progress.report({ message: 'Failed to refresh!' })
+                vscode.window.showErrorMessage('Error refreshing: ' + error.message)
+            }
+        })
+    }
+
+    /**
      * Let the user choose a connection to connect to and execute the optional
      * command after connecting
      */
     async chooseAndConnect(command?: string) {
         let config = vscode.workspace.getConfiguration("jdbcode")
-        let connections = config.get('connections') as any[]
-        let drivers = config.get('drivers') as any[]
+        let connections = config.get('connections') as ConnectionData[]
+        let drivers = config.get('drivers') as DriverData[]
         let choices = [ADD_DRIVER_CHOICE, ADD_CONNECTION_CHOICE]
         if (this.service.getConnection()) choices.push(CLOSE_CHOICE + ': ' + this.service.getConnection().name)
         choices = choices.concat(connections.map((it) => { return it.name }))
@@ -177,13 +194,6 @@ export class DatabaseController {
         catch (error) {
             vscode.window.showErrorMessage('Error describing object: ' + error.message)
         }
-    }
-
-    /**
-     * Refresh the current connection (reload the schemas etc)
-     */
-    async refresh() {
-        this.service.refresh()
     }
 
     /**

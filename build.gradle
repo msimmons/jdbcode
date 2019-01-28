@@ -36,6 +36,7 @@ configure([project(':server'), project(':grammar')]) {
         testCompile "junit:junit:4.12"
         testCompile "org.mockito:mockito-core:2.12.0"
         testCompile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+        testCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     }
 
 }

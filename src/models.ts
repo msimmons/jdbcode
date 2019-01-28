@@ -30,7 +30,6 @@ export interface TreeNode {
 export class SchemaNode implements TreeNode {
     data: SchemaData
     type: TreeNodeType
-    name: string
     resolved: boolean
     typeNodes: TypeNode[]
     constructor(data: SchemaData) {
@@ -48,7 +47,6 @@ export class SchemaNode implements TreeNode {
 export class TypeNode implements TreeNode {
     data: TypeData
     type: TreeNodeType
-    name: string
     objects: ObjectNode[]
     constructor(data: TypeData) {
         this.data = data
@@ -66,11 +64,6 @@ export class ObjectNode implements TreeNode {
     data: ObjectData
     type: TreeNodeType
     resolved?: TableData | ProcedureData
-    owner: any
-    name: string
-    connection: string
-    columns: any[]
-    rows: string[]
     constructor(data: ObjectData) {
         this.data = data
         this.type = "object"

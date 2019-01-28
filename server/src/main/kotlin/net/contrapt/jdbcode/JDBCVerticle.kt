@@ -35,8 +35,30 @@ class JDBCVerticle() : AbstractVerticle() {
                 try {
                     connection = message.body().getJsonObject("connection").mapTo(ConnectionData::class.java)
                     val driver = message.body().getJsonObject("driver").mapTo(DriverData::class.java)
-                    connection = connectionService.connect(connection, driver)
-                    future.complete(JsonObject.mapFrom(connection))
+                    val result = connectionService.connect(connection, driver)
+                    future.complete(JsonObject.mapFrom(result))
+                } catch (e: Exception) {
+                    logger.error("Opening a connection", e)
+                    future.fail(e)
+                }
+            }, false, Handler<AsyncResult<JsonObject>> { ar ->
+                if (ar.failed()) {
+                    logger.error("Connect failed", ar.cause())
+                    message.fail(1, ar.cause().toString())
+                } else message.reply(ar.result())
+            })
+        }
+
+        /**
+         * Request to refresh schema information for the given connection
+         */
+        vertx.eventBus().consumer<JsonObject>("jdbcode.refresh") { message ->
+            vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
+                var connection : ConnectionData
+                try {
+                    connection = message.body().getJsonObject("connection").mapTo(ConnectionData::class.java)
+                    val result = connectionService.refresh(connection)
+                    future.complete(JsonObject.mapFrom(result))
                 } catch (e: Exception) {
                     logger.error("Opening a connection", e)
                     future.fail(e)
