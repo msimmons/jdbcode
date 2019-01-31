@@ -5,5 +5,12 @@ dependencies {
 }
 
 generateGrammarSource {
+    // Things don't seem to be regenerated completely, best to clean first
+    doFirst() {
+        outputs.files.forEach { it.delete() }
+    }
+    inputs.dir("${project.rootDir}/grammar/src/main/antlr/net/contrapt/jdbcode")
+    outputs.dir("${project.rootDir}/grammar/build/generated-src/antlr/main/net/contrapt/jdbcode")
     arguments += ['-lib', "${project.rootDir}/grammar/src/main/antlr/net/contrapt/jdbcode".toString()]
 }
+compileKotlin.dependsOn 'generateGrammarSource'
