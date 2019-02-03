@@ -4,16 +4,6 @@ sealed class ParseItem(val type: ItemType, val range: TokenRange)
 
 class NullItem(range: TokenRange) : ParseItem(ItemType.NULL, range)
 
-class TableList(
-        range: TokenRange,
-        val tableMap: Map<String, TableItem>
-) : ParseItem(ItemType.TABLE_LIST, range)
-
-class SelectList(
-        range: TokenRange,
-        val tableMap: Map<String, TableItem>
-) : ParseItem(ItemType.SELECT_LIST, range)
-
 class TableItem(
         range: TokenRange,
         val owner: String,

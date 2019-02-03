@@ -1,52 +1,55 @@
 package net.contrapt.jdbcode
 
+import net.contrapt.jdbcode.model.ColumnExpr
+import net.contrapt.jdbcode.model.TableItem
+import net.contrapt.jdbcode.model.ValueExpr
 import org.junit.Assert.*
 
-class SelectTest : AbstractSqlParserTest() {
+class SelectTest : SqlParserTest() {
     override val sql = """select col1, a.col2, a.col3 "foo", * from  x.tofu as a where a.col1 = 'hello' and a.col2  """
     override val expectations = listOf(
-            Expected.ESelectList(6) {
+            expectedItem(6, ValueExpr::class) {
             },
-            Expected.EColumnExpr(7) {
+            expectedItem(7, ColumnExpr::class) {
                 assertEquals("col1", it.name)
                 assertTrue(it.tableMap.containsKey("a"))
             },
-            Expected.ESelectList(11) {},
-            Expected.ESelectList(12) {},
-            Expected.EColumnExpr(13) {
+            expectedItem(11, ColumnExpr::class) {},
+            expectedItem(12, ValueExpr::class) {},
+            expectedItem(13, ColumnExpr::class) {
                 assertEquals("a", it.tableAlias)
                 assertEquals("col2", it.name)
             },
-            Expected.EColumnExpr(24) {
+            expectedItem(24, ColumnExpr::class ) {
                 assertEquals("a", it.tableAlias)
                 assertEquals("col3", it.name)
                 assertEquals("tofu", it.tableMap[it.tableAlias]?.name)
             },
-            Expected.ETableList(42) {},
-            Expected.ETableItem(43) {
+            expectedItem(42, TableItem::class) {},
+            expectedItem(43, TableItem::class) {
                 assertEquals("tofu", it.name)
                 //assertEquals("a", it.alias)
                 assertEquals("x", it.owner)
+                it.tableMap.containsKey("a")
             },
-            Expected.EColumnExpr(63) {
+            expectedItem(63, ColumnExpr::class) {
                 assertEquals("col1", it.name)
-                //assertEquals("a", it.alias)
                 assertEquals("a", it.tableAlias)
             },
-            Expected.EColumnExpr(83) {}
+            expectedItem(83, ColumnExpr::class) {}
     )
     override val partials = listOf(
-            Expected.EColumnExpr(7) {
+            expectedItem(7, ColumnExpr::class) {
                 assertEquals("c", it.name)
                 assertFalse(it.tableMap.containsKey("a"))
             },
-            Expected.ETableList(42) {
+            expectedItem(42, TableItem::class) {
             },
-            Expected.EColumnExpr(61) {
+            expectedItem(61, ColumnExpr::class) {
             },
-            Expected.EValueExpr(69) {
+            expectedItem(69, ValueExpr::class) {
             },
-            Expected.EValueExpr(89) {
+            expectedItem(89, ValueExpr::class) {
                 assertTrue(it.tableMap.containsKey("a"))
             }
     )

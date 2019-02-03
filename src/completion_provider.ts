@@ -65,10 +65,6 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
                 return this.handleColumnExpr(item as ColumnExpr, position)
             case 'VALUE_EXPR':
                 return this.handleValueExpr(item as ValueExpr, position)
-            case 'TABLE_LIST':
-                return this.handleTableList(item as TableList, position)
-            case 'SELECT_LIST':
-                return this.handleSelectList(item as SelectList, position)
             case 'TABLE_ITEM':
                 return this.handleTableItem(item as TableItem, position)
             case 'SYNTAX_ERROR':
@@ -152,24 +148,6 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
      * @param item 
      */
     private async handleValueExpr(item: ValueExpr, position: vscode.Position): Promise<vscode.CompletionItem[]> {
-        let tableItems : TableItem[] = []
-        for (var key in item.tableMap) {
-            tableItems.push(item.tableMap[key])
-        }
-        return this.getColumnItems(tableItems)
-    }
-
-    private async handleTableList(item: TableList, position: vscode.Position) : Promise<vscode.CompletionItem[]> {
-        return this.schemaItems.concat(this.tableItems)
-    }
-
-    /**
-     * If tableMap is empty, show tables and complete with a "select * from <table>"
-     * Otherwise, show all columns for tables in table map
-     * 
-     * @param item The select list item
-     */
-    private async handleSelectList(item: SelectList, position: vscode.Position) : Promise<vscode.CompletionItem[]> {
         let tableItems : TableItem[] = []
         for (var key in item.tableMap) {
             tableItems.push(item.tableMap[key])

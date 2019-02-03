@@ -1,43 +1,45 @@
 package net.contrapt.jdbcode
 
+import net.contrapt.jdbcode.model.ColumnExpr
+import net.contrapt.jdbcode.model.TableItem
+import net.contrapt.jdbcode.model.ValueExpr
 import org.junit.Assert.*
 
-class SelectTest2 : AbstractSqlParserTest() {
+class SelectTest2 : SqlParserTest() {
     override val sql = """select sum(decode(col1, null, 0, 1)) over (partition by col2) from  atable group by acolumn order by 1 """
     //override val sql = """select sum(decode(col1, null, 0, 1)) over (partition by col2 order by col3) from  atable group by acolumn order by 1 """
     override val expectations = listOf(
-            Expected.ESelectList(6) {
+            expectedItem(6, ValueExpr::class) {
             },
-            Expected.ESelectList(7) {
+            expectedItem(7, ValueExpr::class) {
                 assertTrue(it.tableMap.containsKey("atable"))
             },
-            Expected.EValueExpr(11) {},
-            Expected.EColumnExpr(18) {},
-            Expected.EValueExpr(24) {},
-            Expected.EValueExpr(30) {},
-            Expected.EValueExpr(33) {},
-            Expected.EColumnExpr(43) {
+            expectedItem(18, ColumnExpr::class) {},
+            expectedItem(24, ValueExpr::class) {},
+            expectedItem(30, ValueExpr::class) {},
+            expectedItem(33, ValueExpr::class) {},
+            expectedItem(43, ColumnExpr::class) {
             },
-            Expected.EColumnExpr(58) {
+            expectedItem(58, ColumnExpr::class) {
                 assertEquals("col2", it.name)
             },
-            Expected.ETableItem(68) {
+            expectedItem(68, TableItem::class) {
             },
-            Expected.EColumnExpr(85) {
+            expectedItem(85, ColumnExpr::class) {
             }
     )
     override val partials = listOf(
-            Expected.EColumnExpr(7) {
+            expectedItem(7, ColumnExpr::class) {
                 assertEquals("s", it.name)
                 assertFalse(it.tableMap.containsKey("atable"))
             },
-            Expected.EValueExpr(42) {
+            expectedItem(42, ValueExpr::class) {
             },
-            Expected.EColumnExpr(58) {
+            expectedItem(58, ColumnExpr::class) {
             },
-            Expected.ETableItem(69) {
+            expectedItem(69, TableItem::class) {
             },
-            Expected.EColumnExpr(86) {
+            expectedItem(86, ColumnExpr::class) {
                 assertTrue(it.tableMap.containsKey("atable"))
             }
     )

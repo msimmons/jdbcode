@@ -50,7 +50,7 @@ export class DatabaseController {
 
     private registerProviders() {
         this.completionProvider = new CompletionProvider(this.service)
-        vscode.languages.registerCompletionItemProvider('sql', this.completionProvider)
+        vscode.languages.registerCompletionItemProvider('sql', this.completionProvider, ".")
         this.schemaContentProvider = new SchemaContentProvider(this.context)
         vscode.workspace.registerTextDocumentContentProvider(this.schemaContentProvider.scheme, this.schemaContentProvider)
         this.schemaTreeProvider = new DatabaseTreeProvider(this.service)

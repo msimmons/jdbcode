@@ -1,26 +1,28 @@
 package net.contrapt.jdbcode
 
+import net.contrapt.jdbcode.model.ColumnExpr
+import net.contrapt.jdbcode.model.TableItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 
-class InsertTest : AbstractSqlParserTest() {
+class InsertTest : SqlParserTest() {
     override val sql = """insert into data (a, b, c) select af, cd, ef from tea"""
     override val expectations = listOf(
-            Expected.ETableItem(12){
+            expectedItem(12, TableItem::class){
                 assertEquals("data", it.name)
             },
-            Expected.EColumnExpr(24) {
+            expectedItem(24, ColumnExpr::class) {
                 assertEquals("Column name", "c", it.name)
                 assertEquals(null, it.tableMap[it.tableAlias]?.name)
             },
-            Expected.ESelectList(40) {},
-            Expected.EColumnExpr(42) {
+            expectedItem(40, ColumnExpr::class) {},
+            expectedItem(42, ColumnExpr::class) {
                 assertEquals("ef", it.name)
                 assertTrue("Table alias", it.tableMap.containsKey("tea"))
             },
-            Expected.ETableItem(51) {
+            expectedItem(51, TableItem::class) {
                 assertEquals("tea", it.name)
             }
     )
-    override val partials = listOf<Expected<*>>()
+    override val partials = listOf<ExpectedItem>()
 }

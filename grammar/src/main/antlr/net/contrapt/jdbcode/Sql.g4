@@ -102,7 +102,7 @@ select_list
  ;
 
 select_item
- : value_expr ( K_AS? column_alias)?
+ : value_expr (extended_value_expr)? ( K_AS? column_alias)?
  ;
 
 column_expr
@@ -116,10 +116,13 @@ value_expr
  | column_expr
  | unary_operator value_expr
  | value_expr operator value_expr
- | value_expr IDENTIFIER value_expr
  | function_name '(' ( value_expr ( ',' value_expr )* )? ')'
- | function_name '(' value_expr ( value_expr )* ')'
- | value_expr value_expr
+ | '(' value_expr ')'
+ | '(' select_statement ')'
+ ;
+
+extended_value_expr
+ : IDENTIFIER '(' (value_expr | K_ORDER | K_BY | IDENTIFIER)* ')'
  ;
 
 where_clause
@@ -161,7 +164,7 @@ operator
  : '||'
  | ('*'|'/'|'%')
  | ('=' | '<' | '>'| '<='| '>='| '!='| '<>')
- | (K_IS | K_IS K_NOT | K_IN | K_LIKE | K_AND | K_OR | K_BY)
+ | (K_IS | K_IS K_NOT | K_IN | K_LIKE | K_AND | K_OR)
  ;
 
 unary_operator

@@ -15,6 +15,9 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
     /** Set of items with locations */
     val itemLocations = mutableSetOf<ParseItem>()
 
+    /** Stack of current items pushed on enter, popped on exit */
+    val currentItem = Stack<ParseItem>()
+
     /** Error item if applicable */
     var syntaxError: ParseItem? = null
 
@@ -55,9 +58,10 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
     }
 
     fun getCaretItem(char: Int) : ParseItem {
+        val cur = if (!currentItem.isEmpty()) currentItem.pop() else null
         return itemLocations.find {
             it.range.start <= char && it.range.stop >= char && !(it is NullItem)
-        } ?: syntaxError ?: NullItem(TokenRange(0, 0, 0, char))
+        } ?: cur ?: syntaxError ?: NullItem(TokenRange(0, 0, 0, char))
     }
 
     override fun enterStatement(ctx: SqlJParser.StatementContext) {
@@ -68,15 +72,30 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
         tableScopes.pop()
     }
 
+    override fun enterTable_list(ctx: SqlJParser.Table_listContext) {
+        currentItem.push(TableItem(getLocation(ctx, true), "", "", ""))
+    }
+
     override fun exitTable_list(ctx: SqlJParser.Table_listContext) {
-        itemLocations.add(TableList(getLocation(ctx, true), tableScopes.peek()))
+        currentItem.pop()
+        itemLocations.add(TableItem(getLocation(ctx, true), "", "", ""))
+    }
+
+    override fun enterSelect_list(ctx: SqlJParser.Select_listContext) {
+        currentItem.push(ColumnExpr(getLocation(ctx, true), "", "", tableScopes.peek()))
     }
 
     override fun exitSelect_list(ctx: SqlJParser.Select_listContext) {
-        itemLocations.add(SelectList(getLocation(ctx, true), tableScopes.peek()))
+        currentItem.pop()
+        itemLocations.add(ColumnExpr(getLocation(ctx, true), "", "", tableScopes.peek()))
+    }
+
+    override fun enterTable_item(ctx: SqlJParser.Table_itemContext) {
+        currentItem.push(TableItem(getLocation(ctx, true), "", "", ""))
     }
 
     override fun exitTable_item(ctx: SqlJParser.Table_itemContext) {
+        currentItem.pop()
         val name = ctx.table_expr()?.table_name()?.text ?: ""
         val owner = ctx.table_expr()?.owner_name()?.text ?: ""
         val alias = ctx.alias_name()?.text ?: name
@@ -84,7 +103,12 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
         tableScopes.peek().put(alias, item)
     }
 
+    override fun enterTable_expr(ctx: SqlJParser.Table_exprContext) {
+        currentItem.push(TableItem(getLocation(ctx, true), "", "", ""))
+    }
+
     override fun exitTable_expr(ctx: SqlJParser.Table_exprContext) {
+        currentItem.pop()
         val name = ctx.table_name()?.text ?: ""
         val owner = ctx.owner_name()?.text ?: ""
         val item = TableItem(getLocation(ctx), owner, name, name)
@@ -92,15 +116,34 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
         if (ctx.parent !is SqlJParser.Table_itemContext) tableScopes.peek().put(name, item)
     }
 
+    override fun enterColumn_expr(ctx: SqlJParser.Column_exprContext) {
+        currentItem.push(ColumnExpr(getLocation(ctx, true), "", "", tableScopes.peek()))
+    }
+
     override fun exitColumn_expr(ctx: SqlJParser.Column_exprContext) {
+        currentItem.pop()
         val tableAlias = ctx.alias_name()?.text ?: ""
         val name = ctx.column_name()?.text ?: ""
         val item = ColumnExpr(getLocation(ctx), tableAlias, name, tableScopes.peek())
         itemLocations.add(item)
     }
 
+    override fun enterValue_expr(ctx: SqlJParser.Value_exprContext) {
+        currentItem.push(ValueExpr(getLocation(ctx, true), tableScopes.peek()))
+    }
+
     override fun exitValue_expr(ctx: SqlJParser.Value_exprContext) {
-        if (ctx.parent is SqlJParser.Select_itemContext) return
+        currentItem.pop()
+        val item = ValueExpr(getLocation(ctx, true), tableScopes.peek())
+        itemLocations.add(item)
+    }
+
+    override fun enterExtended_value_expr(ctx: SqlJParser.Extended_value_exprContext) {
+        currentItem.push(ValueExpr(getLocation(ctx, true), tableScopes.peek()))
+    }
+
+    override fun exitExtended_value_expr(ctx: SqlJParser.Extended_value_exprContext) {
+        currentItem.pop()
         val item = ValueExpr(getLocation(ctx, true), tableScopes.peek())
         itemLocations.add(item)
     }
