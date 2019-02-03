@@ -30,7 +30,6 @@ class SelectTest : SqlParserTest() {
                 assertEquals("tofu", it.name)
                 //assertEquals("a", it.alias)
                 assertEquals("x", it.owner)
-                it.tableMap.containsKey("a")
             },
             expectedItem(63, ColumnExpr::class) {
                 assertEquals("col1", it.name)
