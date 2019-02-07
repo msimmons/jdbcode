@@ -13,7 +13,7 @@ var vm = new Vue({
             <th nowrap class="results">references</th>
         </thead>
         <tbody>
-            <tr v-for="column in dbObject.columns">
+            <tr v-for="column in dbObject.resolved.columns">
                 <td nowrap class="results">
                   {{column.name}}
                   <span v-if="column.keySequence" :title="column.keySequence" class="fa fa-key">
@@ -46,7 +46,7 @@ var vm = new Vue({
             return encodeURI('command:jdbcode.'+command+'?'+ JSON.stringify([id]))
         },
         indexClass: function(index) {
-            let i = this.dbObject.indices.findIndex((name) => { return name === index.name })
+            let i = this.dbObject.resolved.indices.findIndex((name) => { return name === index.name })
             return 'result badge badge-pill badge-' + this.badgeClasses[i]
         },
         indexTitle: function(index) {

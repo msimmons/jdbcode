@@ -7,7 +7,6 @@ import io.vertx.ext.unit.junit.RunTestOnContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import net.contrapt.jdbcode.model.*
 import net.contrapt.jdbcode.service.ConnectionService
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -39,7 +38,7 @@ open class JDBCVerticleTest {
         val message = JsonObject()
                 .put("connection", JsonObject.mapFrom(connection))
                 .put("driver", JsonObject.mapFrom(driver))
-        `when`(mockConnectionService.connect(connection, driver)).thenReturn(ConnectionData().apply { schemas.add(SchemaData("name", SchemaType.schema)) })
+        `when`(mockConnectionService.connect(connection, driver)).thenReturn(ConnectionResult().apply { schemas.add(SchemaData("name", SchemaType.schema)) })
         rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess(){ _ ->
             rule.vertx().eventBus().send("jdbcode.connect", message, context.asyncAssertSuccess<Message<JsonObject>>() { result ->
                 verify(mockConnectionService, times(1)).connect(connection, driver)

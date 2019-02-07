@@ -5,7 +5,19 @@ dependencies {
 }
 
 generateGrammarSource {
-    arguments += ['-lib', 'src/main/antlr/net/contrapt/jdbcode']
+    doFirst() {
+        def classes = file("${project.buildDir}/classes/java/main/net/contrapt/jdbcode/")
+        classes.listFiles().each {
+            it.delete()
+        }
+        outputs.files.forEach {
+            it.listFiles().each {
+                it.delete() 
+            }
+        }
+    }
+    inputs.dir("${project.rootDir}/grammar/src/main/antlr/net/contrapt/jdbcode")
+    outputs.dir("${project.buildDir}/generated-src/antlr/main/net/contrapt/jdbcode")
+    arguments += ['-lib', "${project.rootDir}/grammar/src/main/antlr/net/contrapt/jdbcode".toString()]
 }
-
-build.dependsOn = ['generateGrammarSource']
+compileKotlin.dependsOn 'generateGrammarSource'

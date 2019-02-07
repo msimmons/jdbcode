@@ -3,21 +3,22 @@
 import * as vscode from 'vscode';
 import { Uri } from 'vscode';
 import { SqlStatement } from './models'
+import { DatabaseService } from './database_service';
 
 export class ResultSetWebview {
 
     private context: vscode.ExtensionContext
-    private jvmcode: any
+    private service: DatabaseService
     private sqlStatement: SqlStatement
     private panel: vscode.WebviewPanel
     private hasPendingUpdate: boolean = false
 
-	public constructor(context: vscode.ExtensionContext, jvmcode: any) {
+    public constructor(context: vscode.ExtensionContext, service: DatabaseService) {
         this.context = context
-        this.jvmcode = jvmcode
+        this.service = service
     }
 
-    create (sqlStatement: SqlStatement, docNumber: number) {
+    create(sqlStatement: SqlStatement, docNumber: number) {
         let docName = sqlStatement.connection + '-' + docNumber
         this.sqlStatement = sqlStatement
         this.panel = vscode.window.createWebviewPanel('jdbcode.resultset', docName, vscode.ViewColumn.One, {
@@ -62,14 +63,14 @@ export class ResultSetWebview {
         this.execute()
     }
 
-    private pendingUpdate () {
+    private pendingUpdate() {
         if (this.hasPendingUpdate && this.panel.visible) {
             this.panel.webview.postMessage(this.sqlStatement)
             this.hasPendingUpdate = false
         }
     }
 
-    private update (sqlStatement: SqlStatement) {
+    private update(sqlStatement: SqlStatement) {
         this.sqlStatement = sqlStatement
         if (this.panel.visible) {
             this.panel.webview.postMessage(this.sqlStatement)
@@ -78,67 +79,79 @@ export class ResultSetWebview {
         }
     }
 
-    private execute () {
-        this.jvmcode.send('jdbcode.execute', this.sqlStatement).then((reply) => {
-            this.update(reply.body)
-        }).catch((error) => {
+    private async execute() {
+        try {
+            let result = await this.service.execute(this.sqlStatement)
+            this.update(result)
+        }
+        catch (error) {
             vscode.window.showErrorMessage('Error executing SQL: ' + error.message)
-        })
+        }
     }
 
-    private reexecute () {
+    private async reexecute() {
         // Clear the rows so we aren't sending them back to server
         this.sqlStatement.rows = []
         this.sqlStatement.columns = []
-        this.jvmcode.send('jdbcode.reexecute', this.sqlStatement).then((reply) => {
-            this.update(reply.body)
-        }).catch((error) => {
+        try {
+            let result = await this.service.reexecute(this.sqlStatement)
+            this.update(result)
+        }
+        catch (error) {
             vscode.window.showErrorMessage('Error executing SQL: ' + error.message)
-        })
+        }
     }
 
-    private cancel () {
-        this.jvmcode.send('jdbcode.cancel', { id: this.sqlStatement.id }).then((reply) => {
-            this.update(reply.body)
-        }).catch((error) => {
+    private async cancel() {
+        try {
+            let result = await this.service.cancel(this.sqlStatement.id)
+            this.update(result)
+        }
+        catch(error) {
             vscode.window.showErrorMessage('Error cancelling statement: ' + error.message)
-        })
+        }
     }
 
-    private commit () {
-        this.jvmcode.send('jdbcode.commit', { id: this.sqlStatement.id }).then((reply) => {
-            this.update(reply.body)
-        }).catch((error) => {
+    private async commit() {
+        try {
+            let result = await this.service.commit(this.sqlStatement.id)
+            this.update(result)
+        }
+        catch(error) {
             vscode.window.showErrorMessage('Error committing transaction: ' + error.message)
-        })
+        }
     }
 
-    private rollback () {
-        this.jvmcode.send('jdbcode.rollback', { id: this.sqlStatement.id }).then((reply) => {
-            this.update(reply.body)
-        }).catch((error) => {
+    private async rollback() {
+        try {
+            let result = await this.service.rollback(this.sqlStatement.id)
+            this.update(result)
+        }
+        catch(error) {
             vscode.window.showErrorMessage('Error rolling back transaction: ' + error.message)
-        })
+        }
     }
 
-    public close () {
+    public close() {
         if (this.panel) {
             this.panel.dispose()
         }
     }
 
-    private disposed () {
-        this.jvmcode.send('jdbcode.close', { id: this.sqlStatement.id }).then((reply) => {
-        }).catch((error) => {
+    private disposed() {
+        try {
+            this.service.close(this.sqlStatement.id)
+        }
+        catch(error) {
             vscode.window.showErrorMessage('Error closing statement: ' + error.message)
-        })
+        }
         this.panel = null
         this.sqlStatement = null
         this.context = null
-        this.jvmcode = null
+        this.service = null
     }
 
-    private export () {
+    private export() {
         let columns = this.sqlStatement.columns.map((col) => { return '"' + col + '"' }).join(',')
         let rows = this.sqlStatement.rows.map((row) => {
             return row.map((value) => {
@@ -155,12 +168,12 @@ export class ResultSetWebview {
         })
     }
 
-    getScriptUri(fileName: string) : Uri {
-        let fileUri = vscode.Uri.file(this.context.asAbsolutePath('ui/'+fileName))
-        return fileUri.with({scheme: 'vscode-resource'})
+    getScriptUri(fileName: string): Uri {
+        let fileUri = vscode.Uri.file(this.context.asAbsolutePath('ui/' + fileName))
+        return fileUri.with({ scheme: 'vscode-resource' })
     }
 
-    private getSlickDataHtml(sqlStatement: SqlStatement) : string {
+    private getSlickDataHtml(sqlStatement: SqlStatement): string {
         return `
         <html>
         <head>

@@ -1,5 +1,7 @@
 package net.contrapt.jdbcode.model
 
 data class DriverData(
-        var driverClass : String = ""
+        var name: String = "",
+        var driverClass: String = "",
+        var jarFile: String = ""
 )

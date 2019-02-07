@@ -1,3 +1,6 @@
+import { SchemaData, SchemaType, TypeData, ObjectData, TableData, ProcedureData } from 'server-models'
+import { TreeItem, TreeItemCollapsibleState } from 'vscode'
+
 export interface ResultSet {
     sqlStatement: SqlStatement,
     html: string
@@ -13,33 +16,61 @@ export class SqlStatement {
 }
 
 export interface ObjectDescription {
-    dbObject: SchemaObject
+    dbObject: ObjectNode
     html: string
 }
 
+type TreeNodeType = "namespace" | "type" | "object"
+
 export interface TreeNode {
-    type: string
-    name: string
+    getTreeItem() : TreeItem
+    type : TreeNodeType
 }
 
-export class SchemaData implements TreeNode {
-    name: string
-    type: string
+export class SchemaNode implements TreeNode {
+    data: SchemaData
+    type: TreeNodeType
     resolved: boolean
-    object_types: SchemaType[]
+    typeNodes: TypeNode[]
+    constructor(data: SchemaData) {
+        this.data = data
+        this.type = "namespace"
+    }
+    getTreeItem() : TreeItem {
+        let item = new TreeItem(`${this.data.name} (${this.data.type})`, TreeItemCollapsibleState.Collapsed)
+        item.contextValue = this.data.type
+        //item.iconPath =
+        return item
+    }
 }
 
-export class SchemaType implements TreeNode {
-    name: string
-    type: string
-    objects: SchemaObject[]
+export class TypeNode implements TreeNode {
+    data: TypeData
+    type: TreeNodeType
+    objects: ObjectNode[]
+    constructor(data: TypeData) {
+        this.data = data
+        this.type = "type"
+    }
+    getTreeItem() : TreeItem {
+        let item = new TreeItem(this.data.name, TreeItemCollapsibleState.Collapsed)
+        item.contextValue = this.data.name
+        //item.iconPath = 
+        return item
+    }
 }
 
-export class SchemaObject implements TreeNode {
-    owner: any
-    name: string
-    type: string
-    connection: string
-    columns: any[]
-    rows: string[]
+export class ObjectNode implements TreeNode {
+    data: ObjectData
+    type: TreeNodeType
+    resolved?: TableData | ProcedureData
+    constructor(data: ObjectData) {
+        this.data = data
+        this.type = "object"
+    }
+    getTreeItem() : TreeItem {
+        let item = new TreeItem(this.data.name, TreeItemCollapsibleState.None)
+        item.command = {command: 'jdbcode.describe', arguments: [this], title: 'Describe the object'}
+        return item
+    }
 }

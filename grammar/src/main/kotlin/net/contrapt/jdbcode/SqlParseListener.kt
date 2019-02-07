@@ -1,5 +1,6 @@
 package net.contrapt.jdbcode
 
+import net.contrapt.jdbcode.model.*
 import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.atn.ATNConfigSet
 import org.antlr.v4.runtime.dfa.DFA
@@ -9,13 +10,16 @@ import java.util.*
 class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
 
     /** A stack of scopes for mapping aliases to tables, handles sub-selects */
-    val tableScopes = Stack<MutableMap<String, Item.TableItem>>()
+    val tableScopes = Stack<MutableMap<String, TableItem>>()
 
     /** Set of items with locations */
-    val itemLocations = mutableSetOf<Item>()
+    val itemLocations = mutableSetOf<ParseItem>()
+
+    /** Stack of current items pushed on enter, popped on exit */
+    val currentItem = Stack<ParseItem>()
 
     /** Error item if applicable */
-    var syntaxError: Item? = null
+    var syntaxError: ParseItem? = null
 
     fun parse(sql: String) {
         val input = ANTLRInputStream(sql)
@@ -53,10 +57,11 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
         return getLocation(ctx, false)
     }
 
-    fun getCaretItem(char: Int) : Item {
+    fun getCaretItem(char: Int) : ParseItem {
+        val cur = if (!currentItem.isEmpty()) currentItem.pop() else null
         return itemLocations.find {
-            it.range.start <= char && it.range.stop >= char && !(it is Item.NullItem)
-        } ?: syntaxError ?: Item.NullItem(TokenRange(0, 0, 0, char))
+            it.range.start <= char && it.range.stop >= char && !(it is NullItem)
+        } ?: cur ?: syntaxError ?: NullItem(TokenRange(0, 0, 0, char))
     }
 
     override fun enterStatement(ctx: SqlJParser.StatementContext) {
@@ -67,34 +72,92 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
         tableScopes.pop()
     }
 
+    override fun enterSelect_statement(ctx: SqlJParser.Select_statementContext) {
+        val copyScope = ctx.parent is SqlJParser.Sub_queryContext
+        val tableMap = when (copyScope && !tableScopes.isEmpty()) {
+            true -> mutableMapOf<String, TableItem>().apply { putAll(tableScopes.peek()) }
+            else -> mutableMapOf()
+        }
+        tableScopes.push(tableMap)
+    }
+
+    override fun exitSelect_statement(ctx: SqlJParser.Select_statementContext) {
+        tableScopes.pop()
+    }
+
+    override fun enterTable_list(ctx: SqlJParser.Table_listContext) {
+        currentItem.push(TableItem(getLocation(ctx, true), "", "", ""))
+    }
+
     override fun exitTable_list(ctx: SqlJParser.Table_listContext) {
-        itemLocations.add(Item.TableList(getLocation(ctx, true), tableScopes.peek()))
+        currentItem.pop()
+        itemLocations.add(TableItem(getLocation(ctx, true), "", "", ""))
+    }
+
+    override fun enterSelect_list(ctx: SqlJParser.Select_listContext) {
+        currentItem.push(ColumnExpr(getLocation(ctx, true), "", "", tableScopes.peek()))
     }
 
     override fun exitSelect_list(ctx: SqlJParser.Select_listContext) {
-        itemLocations.add(Item.SelectList(getLocation(ctx, true), tableScopes.peek()))
+        currentItem.pop()
+        itemLocations.add(ColumnExpr(getLocation(ctx, true), "", "", tableScopes.peek()))
+    }
+
+    override fun enterTable_item(ctx: SqlJParser.Table_itemContext) {
+        currentItem.push(TableItem(getLocation(ctx, true), "", "", ""))
     }
 
     override fun exitTable_item(ctx: SqlJParser.Table_itemContext) {
+        currentItem.pop()
         val name = ctx.table_expr()?.table_name()?.text ?: ""
         val owner = ctx.table_expr()?.owner_name()?.text ?: ""
         val alias = ctx.alias_name()?.text ?: name
-        val item = Item.TableItem(getLocation(ctx), owner, name, alias)
+        val item = TableItem(getLocation(ctx), owner, name, alias)
         tableScopes.peek().put(alias, item)
     }
 
+    override fun enterTable_expr(ctx: SqlJParser.Table_exprContext) {
+        currentItem.push(TableItem(getLocation(ctx, true), "", "", ""))
+    }
+
     override fun exitTable_expr(ctx: SqlJParser.Table_exprContext) {
+        currentItem.pop()
         val name = ctx.table_name()?.text ?: ""
         val owner = ctx.owner_name()?.text ?: ""
-        val item = Item.TableItem(getLocation(ctx), owner, name, name)
+        val item = TableItem(getLocation(ctx), owner, name, name)
         itemLocations.add(item)
         if (ctx.parent !is SqlJParser.Table_itemContext) tableScopes.peek().put(name, item)
     }
 
+    override fun enterColumn_expr(ctx: SqlJParser.Column_exprContext) {
+        currentItem.push(ColumnExpr(getLocation(ctx, true), "", "", tableScopes.peek()))
+    }
+
     override fun exitColumn_expr(ctx: SqlJParser.Column_exprContext) {
+        currentItem.pop()
         val tableAlias = ctx.alias_name()?.text ?: ""
         val name = ctx.column_name()?.text ?: ""
-        val item = Item.ColumnExpr(getLocation(ctx), tableAlias, name, tableScopes.peek())
+        val item = ColumnExpr(getLocation(ctx), tableAlias, name, tableScopes.peek())
+        itemLocations.add(item)
+    }
+
+    override fun enterValue_expr(ctx: SqlJParser.Value_exprContext) {
+        currentItem.push(ValueExpr(getLocation(ctx, true), tableScopes.peek()))
+    }
+
+    override fun exitValue_expr(ctx: SqlJParser.Value_exprContext) {
+        currentItem.pop()
+        val item = ValueExpr(getLocation(ctx, true), tableScopes.peek())
+        itemLocations.add(item)
+    }
+
+    override fun enterExtended_value_expr(ctx: SqlJParser.Extended_value_exprContext) {
+        currentItem.push(ValueExpr(getLocation(ctx, true), tableScopes.peek()))
+    }
+
+    override fun exitExtended_value_expr(ctx: SqlJParser.Extended_value_exprContext) {
+        currentItem.pop()
+        val item = ValueExpr(getLocation(ctx, true), tableScopes.peek())
         itemLocations.add(item)
     }
 
@@ -103,7 +166,7 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
 
     override fun syntaxError(recognizer: Recognizer<*, *>?, offendingSymbol: Any?, line: Int, charPositionInLine: Int, msg: String?, e: RecognitionException?) {
         val expected = msg?.split(",")?.toList() ?: emptyList()
-        syntaxError = Item.SyntaxError(TokenRange(0, 0, line, charPositionInLine), expected)
+        syntaxError = SyntaxError(TokenRange(0, 0, line, charPositionInLine), expected)
     }
 
     override fun reportAmbiguity(recognizer: Parser?, dfa: DFA?, startIndex: Int, stopIndex: Int, exact: Boolean, ambigAlts: BitSet?, configs: ATNConfigSet?) {
