@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { CompletionItemKind } from 'vscode';
 import { trimSql } from './extension'
 import { DatabaseService } from './database_service';
-import { TableData, SelectList, ColumnExpr, TableList, TableItem, SyntaxError, ValueExpr } from 'server-models';
+import { TableData, ColumnExpr, TableItem, SyntaxError, ValueExpr } from 'server-models';
 
 export class CompletionProvider implements vscode.CompletionItemProvider {
 
@@ -107,6 +107,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         let aliasItems = aliases.map(a => {
             let ai = new vscode.CompletionItem(a, vscode.CompletionItemKind.Class)
             ai.detail = 'Alias'
+            ai.sortText = `0:${ai.label}`
             return ai
         })
         return Promise.all(described).then(objectNodes => {
@@ -115,6 +116,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
             tableData.forEach(td => columnItems = columnItems.concat(td.columns.map(c => {
                 let ci = new vscode.CompletionItem(c.name, vscode.CompletionItemKind.Field)
                 ci.detail = td.name
+                ci.sortText = `1:${td.name}.${ci.label}`
                 return ci
             })))
             return aliasItems.concat(columnItems)
@@ -130,9 +132,11 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
      */
     private async handleColumnExpr(item: ColumnExpr, position: vscode.Position): Promise<vscode.CompletionItem[]> {
         let tableItems : TableItem[] = []
+        let aliasNames = []
         // If no table alias
         if (!item.tableAlias) {
             for (var key in item.tableMap) {
+                aliasNames.push(key)
                 tableItems.push(item.tableMap[key])
             }
         }
@@ -140,7 +144,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
             tableItems.push(item.tableMap[item.tableAlias])
         }
         if (tableItems.length === 0) return this.tableItems
-        return this.getColumnItems(tableItems)
+        return this.getColumnItems(tableItems, aliasNames)
     }
 
     /**
@@ -149,7 +153,9 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
      */
     private async handleValueExpr(item: ValueExpr, position: vscode.Position): Promise<vscode.CompletionItem[]> {
         let tableItems : TableItem[] = []
+        let aliasNames = []
         for (var key in item.tableMap) {
+            aliasNames.push(key)
             tableItems.push(item.tableMap[key])
         }
         if (tableItems.length === 0) {
@@ -159,7 +165,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
                 return newItem
             })
         } else {
-            return this.getColumnItems(tableItems)
+            return this.getColumnItems(tableItems, aliasNames)
         }
     }
 

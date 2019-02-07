@@ -21,6 +21,10 @@ select_statement
    (K_ORDER K_BY order_clause)?
  ;
 
+sub_query
+ : select_statement
+ ;
+
 compound_operator
  : K_UNION
  | K_UNION K_ALL
@@ -81,7 +85,7 @@ table_expr
 
 table_item
  : table_expr ( K_AS? alias_name )?
- | '(' select_statement ')' K_AS? alias_name
+ | '(' sub_query ')' K_AS? alias_name
  ;
 
 table_list
@@ -94,7 +98,7 @@ join_operator
 
 join_constraint
  : ( K_ON value_expr
-   | K_USING '(' column_expr ( ',' column_expr )* ')' )?
+ | K_USING '(' column_expr ( ',' column_expr )* ')' )?
  ;
 
 select_list
@@ -107,6 +111,7 @@ select_item
 
 column_expr
  : (alias_name '.')? column_name
+ | alias_name '.'
  ;
 
 //sum(decode(col1, null, 0, 1)) over (partition by name)
@@ -118,7 +123,7 @@ value_expr
  | value_expr operator value_expr
  | function_name '(' ( value_expr ( ',' value_expr )* )? ')'
  | '(' value_expr ')'
- | '(' select_statement ')'
+ | '(' sub_query ')'
  ;
 
 extended_value_expr

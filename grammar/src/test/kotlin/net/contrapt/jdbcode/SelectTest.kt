@@ -6,7 +6,7 @@ import net.contrapt.jdbcode.model.ValueExpr
 import org.junit.Assert.*
 
 class SelectTest : SqlParserTest() {
-    override val sql = """select col1, a.col2, a.col3 "foo", * from  x.tofu as a where a.col1 = 'hello' and a.col2  """
+    override val sql = """select col1, a.col2, a.col3 "foo",a. from  x.tofu as a where a.col1 = 'hello' and a.col2  """
     override val expectations = listOf(
             expectedItem(6, ValueExpr::class) {
             },
@@ -25,6 +25,10 @@ class SelectTest : SqlParserTest() {
                 assertEquals("col3", it.name)
                 assertEquals("tofu", it.tableMap[it.tableAlias]?.name)
             },
+            expectedItem(35, ColumnExpr::class ) {
+                assertEquals("a", it.tableAlias)
+                assertEquals("tofu", it.tableMap[it.tableAlias]?.name)
+            },
             expectedItem(42, TableItem::class) {},
             expectedItem(43, TableItem::class) {
                 assertEquals("tofu", it.name)
@@ -41,6 +45,8 @@ class SelectTest : SqlParserTest() {
             expectedItem(7, ColumnExpr::class) {
                 assertEquals("c", it.name)
                 assertFalse(it.tableMap.containsKey("a"))
+            },
+            expectedItem(35, ColumnExpr::class ) {
             },
             expectedItem(42, TableItem::class) {
             },

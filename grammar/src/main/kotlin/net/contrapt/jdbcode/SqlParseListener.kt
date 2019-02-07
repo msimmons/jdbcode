@@ -72,6 +72,19 @@ class SqlParseListener : SqlJBaseListener(), ANTLRErrorListener {
         tableScopes.pop()
     }
 
+    override fun enterSelect_statement(ctx: SqlJParser.Select_statementContext) {
+        val copyScope = ctx.parent is SqlJParser.Sub_queryContext
+        val tableMap = when (copyScope && !tableScopes.isEmpty()) {
+            true -> mutableMapOf<String, TableItem>().apply { putAll(tableScopes.peek()) }
+            else -> mutableMapOf()
+        }
+        tableScopes.push(tableMap)
+    }
+
+    override fun exitSelect_statement(ctx: SqlJParser.Select_statementContext) {
+        tableScopes.pop()
+    }
+
     override fun enterTable_list(ctx: SqlJParser.Table_listContext) {
         currentItem.push(TableItem(getLocation(ctx, true), "", "", ""))
     }
