@@ -2,7 +2,7 @@
 
 import * as vscode from 'vscode'
 import { SchemaNode, TypeNode, ObjectNode, SqlStatement } from './models';
-import { SchemaData, ConnectionData, DriverData, ConnectionResult, Item } from 'server-models';
+import { SchemaData, ConnectionData, DriverData, ConnectionResult, ParseItem } from 'server-models';
 
 export class DatabaseService {
 
@@ -144,7 +144,7 @@ export class DatabaseService {
     /**
      * Parse the given SQL and returning item expcted at cursor
      */
-    public async parse(sql: string, offset: number) : Promise<Item> {
+    public async parse(sql: string, offset: number) : Promise<ParseItem> {
         let reply = await this.jvmcode.send('jdbcode.parse', {sql: sql, char: offset})
         return reply.body
     }

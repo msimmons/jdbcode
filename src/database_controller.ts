@@ -133,7 +133,11 @@ export class DatabaseController {
         let editor = vscode.window.activeTextEditor
         if (!editor) return
         let sql = editor.document.getText(editor.selection)
-        if (!sql) return
+        if (!sql) {
+            let selection = this.getSqlRange(editor.selection.start, editor.document)
+            sql = editor.document.getText(selection)
+            if (!sql) return
+        }
         if (!this.service.getConnection()) {
             this.chooseAndConnect("jdbcode.execute")
             return
@@ -220,7 +224,33 @@ export class DatabaseController {
     }
 
     private trimSql(sql: string) : string {
+        sql = sql.trim()
         if (sql.charAt(sql.length-1) === ';') return sql.slice(0, sql.length-1)
         else return sql
+    }
+
+    /**
+     * We expect SQL statements to be separated by configured delimiters (eg. ';') or an empty line; this is the easiest way to pick them out
+     * as you are typing.  This method figures out where the sql statement starts and ends based on those assumptions
+     * 
+     * @param position The current cursor position
+     * @param document The document you are editing
+     */
+    getSqlRange(position: vscode.Position, document: vscode.TextDocument) : vscode.Range {
+        // Search forwards for empty line, semicolon line ending or end of document
+        let endLine
+        for (endLine = position.line; endLine < document.lineCount-1; endLine++) {
+            if (!document.lineAt(endLine+1).text) break
+            if (document.lineAt(endLine).text.endsWith(';')) break
+        }
+        // Search backwards for empty line, semicolon or beginning of document
+        let startLine
+        for (startLine = position.line; startLine > 0; startLine--) {
+            if (!document.lineAt(startLine-1).text) break
+            if (document.lineAt(startLine-1).text.endsWith(';')) break
+        }
+        let start = new vscode.Position(startLine, 0)
+        let end = new vscode.Position(endLine, document.lineAt(endLine).text.length)
+        return new vscode.Range(start, end)
     }
 }
