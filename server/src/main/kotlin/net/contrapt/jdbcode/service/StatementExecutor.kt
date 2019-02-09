@@ -1,10 +1,7 @@
 package net.contrapt.jdbcode.service
 
 import io.vertx.core.logging.LoggerFactory
-import net.contrapt.jdbcode.model.ConnectionData
-import net.contrapt.jdbcode.model.SqlStatement
-import net.contrapt.jdbcode.model.StatementStatus
-import net.contrapt.jdbcode.model.StatementType
+import net.contrapt.jdbcode.model.*
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
@@ -25,6 +22,11 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
     private var results: ResultSet? = null
     private var columns: MutableList<String> = mutableListOf()
     private var rows: MutableList<MutableList<Any?>> = mutableListOf()
+    private var updateCount = -1;
+    private var executionCount = 0
+    private var executionTime = 0L
+    private var status = StatementStatus.executing
+    private var type = StatementType.query
 
     private var isLimited = true
     private var autocommit = config.autoCommit
@@ -39,40 +41,40 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
 
     fun execute() {
         rows.clear()
-        sqlStatement.error = null
-        sqlStatement.updateCount = -1
+        updateCount = -1
         results?.close()
-        sqlStatement.executionCount++
-        sqlStatement.executionTime += measureTimeMillis {
+        executionCount++
+        executionTime += measureTimeMillis {
             statement.execute()
         }
-        sqlStatement.status = StatementStatus.executed
-        sqlStatement.updateCount = statement.updateCount
-        sqlStatement.type = when (sqlStatement.updateCount) {
+        status = StatementStatus.executed
+        updateCount = statement.updateCount
+        type = when (updateCount) {
             -1 -> StatementType.query
             else -> StatementType.crud
         }
         results = statement.resultSet
-        // Commit for selects to release any locks
-        if ( sqlStatement.updateCount <= 0 ) connection.commit()
+        // Commit immediately for selects to release any locks
+        if (updateCount <= 0) connection.commit()
     }
 
     /**
      * Fetch rows from the current result set, limited by [fetchLimit] if the connection is
      * set to [isLimited] true
      */
-    fun fetch() : SqlStatement {
-        if (results == null) return sqlStatement
+    fun fetch() : SqlResult {
+        if (results == null) {
+            return SqlResult(sqlStatement.id, status, type, updateCount, false, executionCount, executionTime, 0)
+        }
         // Get the column names
         val columnCount = results?.metaData?.columnCount ?: 0
         columns.clear()
         (1..columnCount).forEach {
             columns.add(results?.metaData?.getColumnName(it) ?: "")
         }
-        sqlStatement.columns = columns
-        sqlStatement.rows = rows
+        var moreRows = false
         // Fetch rows
-        sqlStatement.fetchTime = measureTimeMillis {
+        val fetchTime = measureTimeMillis {
             while ( results?.next() ?: false ) {
                 val row = mutableListOf<Any?>()
                 (1..columnCount).forEach {
@@ -80,18 +82,18 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
                 }
                 rows.add(row)
                 if (isLimited && rows.size == fetchLimit) {
-                    sqlStatement.moreRows = true
-                    return sqlStatement
+                    moreRows = true
+                    break
                 }
             }
         }
-        return sqlStatement
+        return SqlResult(sqlStatement.id, status, type, updateCount, moreRows, executionCount, executionTime, fetchTime, columns, rows)
     }
 
     /**
      * Cancel the current statement if possible
      */
-    fun cancel() : SqlStatement {
+    fun cancel() : SqlResult {
         if ( !statement.isClosed) statement.cancel()
         if ( !connection.isClosed) connection.rollback()
         try {
@@ -100,38 +102,39 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
             logger.warn("$javaClass.cancel(): $e")
         }
         results = null
-        sqlStatement.status = StatementStatus.cancelled
-        return sqlStatement
+        status = StatementStatus.cancelled
+        updateCount = -1
+        return SqlResult(sqlStatement.id, status, type, updateCount, false, executionCount, executionTime, 0, columns, rows)
     }
 
     /**
      * Commit the current connection
      */
-    fun commit() : SqlStatement {
+    fun commit() : SqlResult {
         if ( !connection.isClosed) {
-            sqlStatement.updateCount=-1
+            updateCount = -1
+            status = StatementStatus.committed
             connection.commit()
         }
-        sqlStatement.status = StatementStatus.committed
-        return sqlStatement
+        return SqlResult(sqlStatement.id, status, type, updateCount, false, executionCount, executionTime, 0, columns, rows)
     }
 
     /**
      * Rollback the current connection
      */
-    fun rollback() : SqlStatement {
+    fun rollback() : SqlResult {
         if ( !connection.isClosed) {
-            sqlStatement.updateCount=-1
+            updateCount=-1
+            status = StatementStatus.rolledback
             connection.rollback()
         }
-        sqlStatement.status = StatementStatus.rolledback
-        return sqlStatement
+        return SqlResult(sqlStatement.id, status, type, updateCount, false, executionCount, executionTime, 0, columns, rows)
     }
 
     /**
      * Close resources used by this model
      */
-    fun close() : SqlStatement {
+    fun close() : SqlResult {
         cancel()
         try {
             if ( !statement.isClosed) statement.close()
@@ -143,7 +146,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
         } catch (e: SQLException) {
             logger.warn("Closing connection: $e")
         }
-        return sqlStatement
+        return SqlResult(sqlStatement.id)
     }
 
     /**

@@ -66,7 +66,7 @@ open class ConnectionService {
         }
     }
 
-    open fun execute(sqlStatement: SqlStatement): SqlStatement {
+    open fun execute(sqlStatement: SqlStatement): SqlResult {
         val config = configs[sqlStatement.connection] ?:
                 throw IllegalArgumentException("Unknown connection ${sqlStatement.connection}")
         val dataSource = dataSources[sqlStatement.connection] ?:
@@ -78,7 +78,7 @@ open class ConnectionService {
         return statement.fetch()
     }
 
-    open fun reexecute(id: String) : SqlStatement {
+    open fun reexecute(id: String) : SqlResult {
         val statement = statements[id] ?: throw IllegalArgumentException("Unknown statement id $id")
         statement.execute()
         return statement.fetch()
@@ -90,23 +90,23 @@ open class ConnectionService {
         return schemaDesriber.getObjects(dataSource, schemaData)
     }
 
-    fun cancel(id: String): SqlStatement {
+    fun cancel(id: String): SqlResult {
         val statement = statements[id] ?: throw IllegalArgumentException("Unknown statement id $id")
         statement.cancel()
         return statement.fetch()
     }
 
-    fun commit(id: String): SqlStatement {
+    fun commit(id: String): SqlResult {
         val statement = statements[id] ?: throw IllegalArgumentException("Unknown statement id $id")
         return statement.commit()
     }
 
-    fun rollback(id: String): SqlStatement {
+    fun rollback(id: String): SqlResult {
         val statement = statements[id] ?: throw IllegalArgumentException("Unknown statement id $id")
         return statement.rollback()
     }
 
-    fun close(id: String): SqlStatement {
+    fun close(id: String): SqlResult {
         val statement = statements.remove(id) ?: throw IllegalArgumentException("Unknown statement id $id")
         return statement.close()
     }

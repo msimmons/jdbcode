@@ -66,13 +66,15 @@ open class JDBCVerticleTest {
     @Test
     fun testExecute(context: TestContext) {
         val sqlStatement = SqlStatement()
-        `when`(mockConnectionService.execute(sqlStatement)).thenReturn(sqlStatement)
+        val sqlResult = SqlResult(sqlStatement.id)
+        `when`(mockConnectionService.execute(sqlStatement)).thenReturn(sqlResult)
         val message = JsonObject.mapFrom(sqlStatement)
+        val response = JsonObject.mapFrom(sqlResult)
 
         rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess() { _ ->
             rule.vertx().eventBus().send("jdbcode.execute", message, context.asyncAssertSuccess<Message<JsonObject>>() { result ->
                 verify(mockConnectionService, times(1)).execute(sqlStatement)
-                context.assertEquals(message, result.body())
+                context.assertEquals(response, result.body())
             })
         })
     }

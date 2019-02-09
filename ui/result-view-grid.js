@@ -10,20 +10,20 @@ var vm = new Vue({
     template: `
 <div class="container-fluid">
   <div v-if="hasError">
-    <div class="alert alert-danger" role="alert">{{sqlStatement.error}}</div>
+    <div class="alert alert-danger" role="alert">{{sqlResult.error}}</div>
     <pre>{{sqlStatement.sql}}</pre>
   </div>
   <div class="row" v-if="!hasError">
     <div class="col" v-if="isQuery && !busy">
-      <span class="badge badge-light">Executions &nbsp;<span class="badge badge-secondary">{{sqlStatement.executionCount}}</span></span>
-      <span class="badge badge-light">Elapsed &nbsp;<span class="badge badge-secondary">{{sqlStatement.executionTime}}</span></span>
+      <span class="badge badge-light">Executions &nbsp;<span class="badge badge-secondary">{{sqlResult.executionCount}}</span></span>
+      <span class="badge badge-light">Elapsed &nbsp;<span class="badge badge-secondary">{{sqlResult.executionTime}}</span></span>
       <span class="badge badge-light">Rows &nbsp;<span class="badge badge-secondary">{{totalRows}}</span></span>
-      <span class="badge badge-light">More &nbsp;<span class="badge badge-secondary">{{sqlStatement.moreRows}}</span></span>
+      <span class="badge badge-light">More &nbsp;<span class="badge badge-secondary">{{sqlResult.moreRows}}</span></span>
     </div>
     <div class="col" v-if="!isQuery && !busy">
-      <span class="badge badge-light">Elapsed &nbsp;<span class="badge badge-secondary">{{sqlStatement.executionTime}}</span></span>
-      <span class="badge badge-light">Rows Affected &nbsp;<span class="badge badge-secondary">{{sqlStatement.updateCount}}</span></span>
-      <span class="badge badge-light">Status &nbsp;<span class="badge badge-secondary">{{sqlStatement.status}}</span></span>
+      <span class="badge badge-light">Elapsed &nbsp;<span class="badge badge-secondary">{{sqlResult.executionTime}}</span></span>
+      <span class="badge badge-light">Rows Affected &nbsp;<span class="badge badge-secondary">{{sqlResult.updateCount}}</span></span>
+      <span class="badge badge-light">Status &nbsp;<span class="badge badge-secondary">{{sqlResult.status}}</span></span>
     </div>
     <div class="col" v-if="busy">
       <span class="fa fa-spinner fa-pulse fa-3x fa-fw"></span>
@@ -58,21 +58,23 @@ var vm = new Vue({
             sortBy: null,
             sortDesc: false,
             filter: null,
-            sqlStatement: { rows: [], status: 'executing' },
+            sqlStatement: { },
+            sqlResult: { rows: [], status: 'executing' },
             vscode: null
         }
     },
     computed: {
-        busy: function() { return this.sqlStatement.status === 'executing' },
-        totalRows: function () { return this.sqlStatement.rows.length },
-        hasError: function () { return this.sqlStatement.error != null },
-        isQuery: function () { return this.sqlStatement.type === 'query' },
-        isTxn: function () { return this.sqlStatement.type === 'crud' && this.sqlStatement.status === 'executed' }
+        busy: function() { return this.sqlResult.status === 'executing' },
+        totalRows: function () { return this.sqlResult.rows.length },
+        hasError: function () { return this.sqlResult.error != null },
+        isQuery: function () { return this.sqlResult.type === 'query' },
+        isTxn: function () { return this.sqlResult.type === 'crud' && this.sqlResult.status === 'executed' }
     },
     methods: {
         update: function (event) {
-            this.sqlStatement = event.data
-            if (this.sqlStatement.columns.length > 0) {
+            this.sqlStatement = event.data.statement
+            this.sqlResult = event.data.result
+            if (this.sqlResult.columns.length > 0) {
                 if (!grid) {
                     this.createGrid()
                 } else {
@@ -82,12 +84,12 @@ var vm = new Vue({
         },
         execute: function (command) {
             if (command === 'reexecute') {
-                this.sqlStatement.status = 'executing'
+                this.sqlResult.status = 'executing'
             }
             this.vscode.postMessage({command: command, id: this.sqlStatement.id})
         },
         createGrid: function () {
-            this.columns = this.sqlStatement.columns.map((column, ndx) => {
+            this.columns = this.sqlResult.columns.map((column, ndx) => {
                 console.log(column + ndx)
                 return { id: `${ndx}`, name: column, field: `${ndx}`, headerCssClass: 'result-grid-header', cssClass: 'result-grid-row' }
             });
@@ -98,7 +100,7 @@ var vm = new Vue({
             grid = new Slick.Grid("#result-grid", data, this.columns, options);
         },
         getData: function () {
-            return this.sqlStatement.rows.map((row) => {
+            return this.sqlResult.rows.map((row) => {
                 var rowObject = {};
                 this.columns.forEach((column, ndx) => {
                     rowObject[column.field] = row[ndx];

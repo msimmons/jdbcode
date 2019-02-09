@@ -7,8 +7,8 @@ import { DatabaseTreeProvider } from "./database_tree_provider";
 import { SchemaContentProvider } from "./schema_content_provider";
 import { CompletionProvider } from "./completion_provider";
 import { ResultSetWebview } from './resultset_webview';
-import { ObjectNode, SqlStatement } from './models';
-import { ObjectOwner, ConnectionData, DriverData } from 'server-models';
+import { ObjectNode } from './models';
+import { ObjectOwner, ConnectionData, DriverData, SqlStatement } from 'server-models';
 
 let makeUUID = require('node-uuid').v4;
 
@@ -146,10 +146,7 @@ export class DatabaseController {
         let sqlStatement: SqlStatement = {
             id: queryId,
             connection: this.service.getConnection().name,
-            sql: this.trimSql(sql),
-            columns: [],
-            rows: [],
-            status: 'executing'
+            sql: this.trimSql(sql)
         }
         /**
          * Open the query result UI and execute the query updating the UI with the results

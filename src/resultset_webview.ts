@@ -2,7 +2,7 @@
 
 import * as vscode from 'vscode';
 import { Uri } from 'vscode';
-import { SqlStatement } from './models'
+import { SqlStatement, SqlResult } from 'server-models'
 import { DatabaseService } from './database_service';
 
 export class ResultSetWebview {
@@ -10,6 +10,7 @@ export class ResultSetWebview {
     private context: vscode.ExtensionContext
     private service: DatabaseService
     private sqlStatement: SqlStatement
+    private sqlResult: SqlResult
     private panel: vscode.WebviewPanel
     private hasPendingUpdate: boolean = false
 
@@ -18,9 +19,29 @@ export class ResultSetWebview {
         this.service = service
     }
 
+    /**
+     * Create default SqlResult until we get a real one
+     */
+    private createSqlResult(sqlStatement: SqlStatement) : SqlResult {
+        return {
+            id: sqlStatement.id,
+            status: "executing",
+            type: "query",
+            columns: [],
+            rows: [],
+            executionCount: 0,
+            executionTime: 0,
+            fetchTime: 0,
+            moreRows: false,
+            updateCount: -1,
+            error: undefined
+        }
+    }
+
     create(sqlStatement: SqlStatement, docNumber: number) {
         let docName = sqlStatement.connection + '-' + docNumber
         this.sqlStatement = sqlStatement
+        this.sqlResult = this.createSqlResult(sqlStatement)
         this.panel = vscode.window.createWebviewPanel('jdbcode.resultset', docName, vscode.ViewColumn.One, {
             enableScripts: true,
             retainContextWhenHidden: true,
@@ -32,7 +53,7 @@ export class ResultSetWebview {
         this.panel.webview.onDidReceiveMessage(message => {
             switch (message.command) {
                 case 'reexecute':
-                    this.sqlStatement.status = 'executing'
+                    this.sqlResult.status = 'executing'
                     this.reexecute()
                     break
                 case 'cancel':
@@ -59,21 +80,25 @@ export class ResultSetWebview {
 
         this.panel.webview.html = this.getSlickDataHtml(sqlStatement)
         // Execute the statement
-        this.panel.webview.postMessage(this.sqlStatement)
+        this.sendMessage()
         this.execute()
+    }
+
+    private sendMessage() {
+        this.panel.webview.postMessage({statement: this.sqlStatement, result: this.sqlResult})
     }
 
     private pendingUpdate() {
         if (this.hasPendingUpdate && this.panel.visible) {
-            this.panel.webview.postMessage(this.sqlStatement)
+            this.sendMessage()
             this.hasPendingUpdate = false
         }
     }
 
-    private update(sqlStatement: SqlStatement) {
-        this.sqlStatement = sqlStatement
+    private update(sqlResult: SqlResult) {
+        this.sqlResult = sqlResult
         if (this.panel.visible) {
-            this.panel.webview.postMessage(this.sqlStatement)
+            this.sendMessage()
         } else {
             this.hasPendingUpdate = true
         }
@@ -91,8 +116,8 @@ export class ResultSetWebview {
 
     private async reexecute() {
         // Clear the rows so we aren't sending them back to server
-        this.sqlStatement.rows = []
-        this.sqlStatement.columns = []
+        this.sqlResult.rows = []
+        this.sqlResult.columns = []
         try {
             let result = await this.service.reexecute(this.sqlStatement)
             this.update(result)
@@ -152,8 +177,8 @@ export class ResultSetWebview {
     }
 
     private export() {
-        let columns = this.sqlStatement.columns.map((col) => { return '"' + col + '"' }).join(',')
-        let rows = this.sqlStatement.rows.map((row) => {
+        let columns = this.sqlResult.columns.map((col) => { return '"' + col + '"' }).join(',')
+        let rows = this.sqlResult.rows.map((row) => {
             return row.map((value) => {
                 if (typeof value === 'number') return value
                 if (typeof value === 'boolean') return value
