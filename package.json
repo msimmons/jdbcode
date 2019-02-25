@@ -156,7 +156,7 @@
     }
   },
   "scripts": {
-    "vscode:prepare": "./gradlew deploy; npm run compile; cd reactui && npm run deploy",
+    "vscode:prepublish": "./gradlew deploy; npm run compile; cd reactui && npm run deploy",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "postinstall": "node ./node_modules/vscode/bin/install",
