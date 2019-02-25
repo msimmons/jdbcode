@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { Uri } from 'vscode';
 import { SqlStatement, SqlResult } from 'server-models'
 import { DatabaseService } from './database_service';
+import { readFileSync } from 'fs';
 
 export class ResultSetWebview {
 
@@ -78,7 +79,9 @@ export class ResultSetWebview {
             this.pendingUpdate()
         }, null, this.context.subscriptions)
 
-        this.panel.webview.html = this.getSlickDataHtml(sqlStatement)
+        //this.panel.webview.html = this.getSlickDataHtml(sqlStatement)
+        this.panel.webview.html = this.getResultHtml()
+
         // Execute the statement
         this.sendMessage()
         this.execute()
@@ -193,34 +196,14 @@ export class ResultSetWebview {
         })
     }
 
-    getScriptUri(fileName: string): Uri {
-        let fileUri = vscode.Uri.file(this.context.asAbsolutePath('ui/' + fileName))
-        return fileUri.with({ scheme: 'vscode-resource' })
-    }
-
-    private getSlickDataHtml(sqlStatement: SqlStatement): string {
-        return `
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Result View</title>
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/bootstrap.min.css')}" />
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/font-awesome.min.css')}" />
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/slick.grid.css')}" />
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/jquery-ui.custom.min.css')}" />
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('main.css')}" />
-            <script src="${this.getScriptUri('dist/js/jquery-1.11.2.min.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/jquery.event.drag-2.3.0.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/slick.core.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/slick.grid.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/vue.min.js')}"></script>
-        </head>
-        <body>
-            <div id="result-control"/>
-            <script src="${this.getScriptUri('result-view-grid.js')}"></script>
-        </body>
-        </html>
-        `
+    private getResultHtml() : string {
+        let indexPath = this.context.asAbsolutePath('out/ui/index.html')
+        let index = readFileSync(indexPath).toString()
+        let scriptUri = vscode.Uri.file(this.context.asAbsolutePath('out/ui/'))
+        scriptUri = scriptUri.with({scheme: 'vscode-resource'})
+        index = index.replace(/\.\//g, scriptUri.toString())
+        index = index.replace('$VIEW', 'RESULT_VIEW')
+        return index
     }
 
 }

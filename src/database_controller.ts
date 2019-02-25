@@ -9,6 +9,7 @@ import { CompletionProvider } from "./completion_provider";
 import { ResultSetWebview } from './resultset_webview';
 import { ObjectNode } from './models';
 import { ObjectOwner, ConnectionData, DriverData, SqlStatement } from 'server-models';
+import { SchemaWebview } from './schema_webview';
 
 let makeUUID = require('node-uuid').v4;
 
@@ -23,6 +24,7 @@ export class DatabaseController {
     private schemaContentProvider: SchemaContentProvider
     private completionProvider: CompletionProvider
     private resultSetPanels: ResultSetWebview[] = []
+    private schemaPanels: SchemaWebview[] = []
     private docCount = 0
 
     private service: DatabaseService
@@ -184,17 +186,10 @@ export class DatabaseController {
      * Show a description of the given object 
      */
     async showDescribe(node: ObjectNode) {
-        let docName = this.getOwnerString(node.data.owner) + '.' + node.data.name
-        let uri = vscode.Uri.parse(this.schemaContentProvider.scheme + '://' + docName)
-        try {
-            let described = await this.service.describe(node)
-            vscode.commands.executeCommand('vscode.previewHtml', uri, vscode.ViewColumn.One, docName).then((success) => {
-                this.schemaContentProvider.update(uri, described)
-            })
-        }
-        catch (error) {
-            vscode.window.showErrorMessage('Error describing object: ' + error.message)
-        }
+        let panel = new SchemaWebview(this.context, this.service)
+        let docName = this.getOwnerString(node.data.owner) + '.' + node.data.name + ' (' + node.data.type + ')'
+        panel.create(node, docName)
+        this.schemaPanels.push(panel)
     }
 
     /**
@@ -203,6 +198,8 @@ export class DatabaseController {
     async disconnect() {
         this.resultSetPanels.forEach(panel => { panel.close() })
         this.resultSetPanels = []
+        this.schemaPanels.forEach(panel => { panel.close() })
+        this.schemaPanels = []
         this.schemaTreeProvider.clear()
         this.statusBarItem.text = '$(database)'
         // Tell server to disconnect (close current statements and connections)

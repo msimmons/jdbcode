@@ -34,7 +34,7 @@ jobs:
       - restore_cache:
           keys:
             *npm_cache_keys
-      - run: ./gradlew generateGrammarSource build
+      - run: ./gradlew deploy
       - run: 
           shell: /bin/bash --login -eo pipefail 
           command: |
