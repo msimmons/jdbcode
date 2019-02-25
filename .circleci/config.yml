@@ -42,7 +42,8 @@ jobs:
             nvm i 8
             npm i vsce -g
             npm install
-            npm install ui
+            cd ui && npm install
+            cd ..
             vsce package
             mkdir dist
             cp *.vsix dist
