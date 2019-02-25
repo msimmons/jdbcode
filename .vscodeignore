@@ -15,6 +15,6 @@ gradle/**
 .idea/**
 server/**
 grammar/**
-reactui/**
+ui/**
 .circleci/**
 build/**

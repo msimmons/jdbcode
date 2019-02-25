@@ -103,9 +103,9 @@ export class SchemaWebview {
     }
 
     private getSchemaHtml() : string {
-        let indexPath = this.context.asAbsolutePath('reactui/build/index.html')
+        let indexPath = this.context.asAbsolutePath('out/ui/index.html')
         let index = readFileSync(indexPath).toString()
-        let scriptUri = vscode.Uri.file(this.context.asAbsolutePath('reactui/build/'))
+        let scriptUri = vscode.Uri.file(this.context.asAbsolutePath('out/ui/'))
         scriptUri = scriptUri.with({scheme: 'vscode-resource'})
         index = index.replace(/\.\//g, scriptUri.toString())
         let viewType = this.getViewType(this.objectNode)

@@ -14,9 +14,8 @@
         "node_modules",
         ".vscode-test",
         "out",
-        "ui",
         "grammar",
         "server",
-        "reactui"
+        "ui"
     ]
 }
