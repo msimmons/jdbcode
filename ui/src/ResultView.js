@@ -74,10 +74,10 @@ export class ResultView extends Component {
       let totalLen = 0
       this.columns = event.data.result.columns.map((column, ndx) => {
         totalLen += column.length
-        return {label: column, prop: column, columnKey: ndx }
+        return {label: column, prop: column, columnKey: ndx, render: this.renderCell }
       })
       this.columns.forEach((column) => {
-        let relativeWidth = Math.floor(((column.label.length*this.columns.length*2)/totalLen)*100)
+        let relativeWidth = Math.floor((((column.label.length+5)*this.columns.length)/totalLen)*100)
         column.minWidth = relativeWidth
         column.width = relativeWidth
       })
@@ -118,6 +118,10 @@ export class ResultView extends Component {
     this.postMessage('cancel')
     let newResult = {...this.state.result, status: 'cancelled'}
     this.setState({statement: this.state.statement, result: newResult})
+  }
+
+  renderCell = (row, column, ndx) => {
+    return (<span style={{whiteSpace: "nowrap"}}>{row[column.prop]}</span>)
   }
 
   renderError() {

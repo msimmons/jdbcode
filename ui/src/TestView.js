@@ -133,7 +133,7 @@ export class TestView extends Component {
       totalLen += column.label.length
     })
     testColumns.forEach((column) => {
-      let relativeLen = Math.floor((column.label.length*testColumns.length*2/totalLen)*100)
+      let relativeLen = Math.floor(((column.label.length)*testColumns.length/totalLen)*100)
       column.minWidth = relativeLen
     })
   }
