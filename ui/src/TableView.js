@@ -63,7 +63,7 @@ export class TableView extends Component {
   constructor(props) {
     super(props)
     this.setState(initialState)
-    /*global acquireVsCodeApi vscode:true*/
+    /*global acquireVsCodeApi */
     this.vscode = (typeof acquireVsCodeApi === 'function') ? acquireVsCodeApi() : undefined
     window.addEventListener('message', (event) => {
       this.update(event)

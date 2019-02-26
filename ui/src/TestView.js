@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Table, Button, Input, Layout, Tag, Alert, Icon } from 'element-react'
+import { Table, Button } from 'element-react'
 
 const testColumns = [
   {
@@ -119,14 +119,11 @@ const initialState = {
 export class TestView extends Component {
 
   vscode = undefined
-  sqlStatement = undefined
-  sqlResult = undefined
-  columns = undefined
-
+  
   constructor(props) {
     super(props) 
     this.state = initialState
-    /*global acquireVsCodeApi vscode:true*/
+    /*global acquireVsCodeApi*/
     this.vscode = (typeof acquireVsCodeApi === 'function') ? acquireVsCodeApi() : undefined
     window.addEventListener('message', (event) => {
       this.update(event)
