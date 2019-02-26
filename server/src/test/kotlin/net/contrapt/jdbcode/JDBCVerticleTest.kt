@@ -82,7 +82,7 @@ open class JDBCVerticleTest {
     @Test
     fun testDisconnect(context: TestContext) {
         val connection = ConnectionData()
-        val message = JsonObject.mapFrom(connection)
+        val message = JsonObject().put("connection", JsonObject.mapFrom(connection))
 
         rule.vertx().deployVerticle(verticle, context.asyncAssertSuccess(){ _ ->
             rule.vertx().eventBus().send("jdbcode.disconnect", message, context.asyncAssertSuccess<Message<JsonObject>>() { _ ->

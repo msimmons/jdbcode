@@ -191,7 +191,7 @@ class JDBCVerticle() : AbstractVerticle() {
         vertx.eventBus().consumer<JsonObject>("jdbcode.disconnect") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 try {
-                    val connection = message.body().mapTo(ConnectionData::class.java)
+                    val connection = message.body().getJsonObject("connection").mapTo(ConnectionData::class.java)
                     connectionService.disconnect(connection)
                     future.complete(JsonObject.mapFrom(connection))
                 } catch (e: Exception) {
