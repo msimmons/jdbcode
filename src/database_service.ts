@@ -1,8 +1,8 @@
 'use strict'
 
 import * as vscode from 'vscode'
-import { SchemaNode, TypeNode, ObjectNode, SqlStatement } from './models';
-import { SchemaData, ConnectionData, DriverData, ConnectionResult, ParseItem } from 'server-models';
+import { SchemaNode, TypeNode, ObjectNode } from './models';
+import { SchemaData, ConnectionData, DriverData, ConnectionResult, ParseItem, SqlStatement, SqlResult } from 'server-models';
 
 export class DatabaseService {
 
@@ -66,6 +66,7 @@ export class DatabaseService {
      * Disconnect the current connection
      */
     public async disconnect() {
+        if (!this.currentConnection) return
         await this.jvmcode.send('jdbcode.disconnect', {connection: this.currentConnection})
         this.currentConnection = undefined
         this.schemaNodes = []
@@ -97,41 +98,41 @@ export class DatabaseService {
     /**
      * Execute the sql statement
      */
-    public async execute(sql: SqlStatement) : Promise<SqlStatement> {
+    public async execute(sql: SqlStatement) : Promise<SqlResult> {
         let result= await this.jvmcode.send('jdbcode.execute', sql)
-        return result.body as SqlStatement
+        return result.body as SqlResult
     }
 
     /**
      * Re-execute the sql statement
      */
-    public async reexecute(sql: SqlStatement) : Promise<SqlStatement> {
+    public async reexecute(sql: SqlStatement) : Promise<SqlResult> {
         let result = await this.jvmcode.send('jdbcode.reexecute', sql)
-        return result.body as SqlStatement
+        return result.body as SqlResult
     }
 
     /**
      * Cancel the sql statement
      */
-    public async cancel(id: string) : Promise<SqlStatement> {
+    public async cancel(id: string) : Promise<SqlResult> {
         let result = await this.jvmcode.send('jdbcode.cancel', {id: id})
-        return result.body as SqlStatement
+        return result.body as SqlResult
     }
 
     /**
      * Commit the sql statement
      */
-    public async commit(id: string) : Promise<SqlStatement> {
+    public async commit(id: string) : Promise<SqlResult> {
         let result = await this.jvmcode.send('jdbcode.commit', {id: id})
-        return result.body as SqlStatement
+        return result.body as SqlResult
     }
 
     /**
      * Rollback the sql statement
      */
-    public async rollback(id: string) : Promise<SqlStatement> {
+    public async rollback(id: string) : Promise<SqlResult> {
         let result = await this.jvmcode.send('jdbcode.rollback', {id: id})
-        return result.body as SqlStatement
+        return result.body as SqlResult
     }
 
     /**

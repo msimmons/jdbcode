@@ -2,14 +2,16 @@
 
 import * as vscode from 'vscode';
 import { Uri } from 'vscode';
-import { SqlStatement } from './models'
+import { SqlStatement, SqlResult } from 'server-models'
 import { DatabaseService } from './database_service';
+import { readFileSync } from 'fs';
 
 export class ResultSetWebview {
 
     private context: vscode.ExtensionContext
     private service: DatabaseService
     private sqlStatement: SqlStatement
+    private sqlResult: SqlResult
     private panel: vscode.WebviewPanel
     private hasPendingUpdate: boolean = false
 
@@ -18,9 +20,29 @@ export class ResultSetWebview {
         this.service = service
     }
 
+    /**
+     * Create default SqlResult until we get a real one
+     */
+    private createSqlResult(sqlStatement: SqlStatement) : SqlResult {
+        return {
+            id: sqlStatement.id,
+            status: "executing",
+            type: "query",
+            columns: [],
+            rows: [],
+            executionCount: 0,
+            executionTime: 0,
+            fetchTime: 0,
+            moreRows: false,
+            updateCount: -1,
+            error: undefined
+        }
+    }
+
     create(sqlStatement: SqlStatement, docNumber: number) {
         let docName = sqlStatement.connection + '-' + docNumber
         this.sqlStatement = sqlStatement
+        this.sqlResult = this.createSqlResult(sqlStatement)
         this.panel = vscode.window.createWebviewPanel('jdbcode.resultset', docName, vscode.ViewColumn.One, {
             enableScripts: true,
             retainContextWhenHidden: true,
@@ -32,7 +54,7 @@ export class ResultSetWebview {
         this.panel.webview.onDidReceiveMessage(message => {
             switch (message.command) {
                 case 'reexecute':
-                    this.sqlStatement.status = 'executing'
+                    this.sqlResult.status = 'executing'
                     this.reexecute()
                     break
                 case 'cancel':
@@ -57,23 +79,29 @@ export class ResultSetWebview {
             this.pendingUpdate()
         }, null, this.context.subscriptions)
 
-        this.panel.webview.html = this.getSlickDataHtml(sqlStatement)
+        //this.panel.webview.html = this.getSlickDataHtml(sqlStatement)
+        this.panel.webview.html = this.getResultHtml()
+
         // Execute the statement
-        this.panel.webview.postMessage(this.sqlStatement)
+        this.sendMessage()
         this.execute()
+    }
+
+    private sendMessage() {
+        this.panel.webview.postMessage({statement: this.sqlStatement, result: this.sqlResult})
     }
 
     private pendingUpdate() {
         if (this.hasPendingUpdate && this.panel.visible) {
-            this.panel.webview.postMessage(this.sqlStatement)
+            this.sendMessage()
             this.hasPendingUpdate = false
         }
     }
 
-    private update(sqlStatement: SqlStatement) {
-        this.sqlStatement = sqlStatement
+    private update(sqlResult: SqlResult) {
+        this.sqlResult = sqlResult
         if (this.panel.visible) {
-            this.panel.webview.postMessage(this.sqlStatement)
+            this.sendMessage()
         } else {
             this.hasPendingUpdate = true
         }
@@ -91,8 +119,8 @@ export class ResultSetWebview {
 
     private async reexecute() {
         // Clear the rows so we aren't sending them back to server
-        this.sqlStatement.rows = []
-        this.sqlStatement.columns = []
+        this.sqlResult.rows = []
+        this.sqlResult.columns = []
         try {
             let result = await this.service.reexecute(this.sqlStatement)
             this.update(result)
@@ -152,8 +180,8 @@ export class ResultSetWebview {
     }
 
     private export() {
-        let columns = this.sqlStatement.columns.map((col) => { return '"' + col + '"' }).join(',')
-        let rows = this.sqlStatement.rows.map((row) => {
+        let columns = this.sqlResult.columns.map((col) => { return '"' + col + '"' }).join(',')
+        let rows = this.sqlResult.rows.map((row) => {
             return row.map((value) => {
                 if (typeof value === 'number') return value
                 if (typeof value === 'boolean') return value
@@ -168,34 +196,14 @@ export class ResultSetWebview {
         })
     }
 
-    getScriptUri(fileName: string): Uri {
-        let fileUri = vscode.Uri.file(this.context.asAbsolutePath('ui/' + fileName))
-        return fileUri.with({ scheme: 'vscode-resource' })
-    }
-
-    private getSlickDataHtml(sqlStatement: SqlStatement): string {
-        return `
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Result View</title>
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/bootstrap.min.css')}" />
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/font-awesome.min.css')}" />
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/slick.grid.css')}" />
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('dist/css/jquery-ui.custom.min.css')}" />
-            <link type="text/css" rel="stylesheet" href="${this.getScriptUri('main.css')}" />
-            <script src="${this.getScriptUri('dist/js/jquery-1.11.2.min.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/jquery.event.drag-2.3.0.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/slick.core.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/slick.grid.js')}"></script>
-            <script src="${this.getScriptUri('dist/js/vue.min.js')}"></script>
-        </head>
-        <body>
-            <div id="result-control"/>
-            <script src="${this.getScriptUri('result-view-grid.js')}"></script>
-        </body>
-        </html>
-        `
+    private getResultHtml() : string {
+        let indexPath = this.context.asAbsolutePath('out/ui/index.html')
+        let index = readFileSync(indexPath).toString()
+        let scriptUri = vscode.Uri.file(this.context.asAbsolutePath('out/ui/'))
+        scriptUri = scriptUri.with({scheme: 'vscode-resource'})
+        index = index.replace(/\.\//g, scriptUri.toString())
+        index = index.replace('$VIEW', 'RESULT_VIEW')
+        return index
     }
 
 }

@@ -76,15 +76,13 @@ class JDBCVerticle() : AbstractVerticle() {
          */
         vertx.eventBus().consumer<JsonObject>("jdbcode.execute") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
-                var sqlStatement = SqlStatement()
+                val sqlStatement = message.body().mapTo(SqlStatement::class.java)
                 try {
-                    sqlStatement = message.body().mapTo(SqlStatement::class.java)
                     val result = connectionService.execute(sqlStatement)
                     future.complete(JsonObject.mapFrom(result))
                 } catch (e: Exception) {
                     logger.error("Executing sql statement", e)
-                    sqlStatement.error = e.toString()
-                    future.complete(JsonObject.mapFrom(sqlStatement))
+                    future.complete(JsonObject.mapFrom(SqlResult(sqlStatement.id, error = e.toString())))
                 }
             }, false, Handler<AsyncResult<JsonObject>> { ar ->
                 if (ar.failed()) message.fail(1, ar.cause().toString())
@@ -193,7 +191,7 @@ class JDBCVerticle() : AbstractVerticle() {
         vertx.eventBus().consumer<JsonObject>("jdbcode.disconnect") { message ->
             vertx.executeBlocking(Handler<Future<JsonObject>> { future ->
                 try {
-                    val connection = message.body().mapTo(ConnectionData::class.java)
+                    val connection = message.body().getJsonObject("connection").mapTo(ConnectionData::class.java)
                     connectionService.disconnect(connection)
                     future.complete(JsonObject.mapFrom(connection))
                 } catch (e: Exception) {

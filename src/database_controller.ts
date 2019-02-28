@@ -7,8 +7,9 @@ import { DatabaseTreeProvider } from "./database_tree_provider";
 import { SchemaContentProvider } from "./schema_content_provider";
 import { CompletionProvider } from "./completion_provider";
 import { ResultSetWebview } from './resultset_webview';
-import { ObjectNode, SqlStatement } from './models';
-import { ObjectOwner, ConnectionData, DriverData } from 'server-models';
+import { ObjectNode } from './models';
+import { ObjectOwner, ConnectionData, DriverData, SqlStatement } from 'server-models';
+import { SchemaWebview } from './schema_webview';
 
 let makeUUID = require('node-uuid').v4;
 
@@ -23,6 +24,7 @@ export class DatabaseController {
     private schemaContentProvider: SchemaContentProvider
     private completionProvider: CompletionProvider
     private resultSetPanels: ResultSetWebview[] = []
+    private schemaPanels: SchemaWebview[] = []
     private docCount = 0
 
     private service: DatabaseService
@@ -58,11 +60,8 @@ export class DatabaseController {
     }
 
     async connect(connection: ConnectionData, driver: DriverData, command?: string) {
-        // Close any existing result sets (just in case)
-        this.resultSetPanels.forEach((panel) => {
-            panel.close()
-        })
-        this.resultSetPanels = []
+        // Disconnect first if necessary
+        await this.disconnect()
         // Send connection info to server, it will create connection pool if it doesn't already exist
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Connect to DB" }, async (progress) => {
             progress.report({ message: 'Connecting to ' + connection.name })
@@ -146,10 +145,7 @@ export class DatabaseController {
         let sqlStatement: SqlStatement = {
             id: queryId,
             connection: this.service.getConnection().name,
-            sql: this.trimSql(sql),
-            columns: [],
-            rows: [],
-            status: 'executing'
+            sql: this.trimSql(sql)
         }
         /**
          * Open the query result UI and execute the query updating the UI with the results
@@ -187,17 +183,10 @@ export class DatabaseController {
      * Show a description of the given object 
      */
     async showDescribe(node: ObjectNode) {
-        let docName = this.getOwnerString(node.data.owner) + '.' + node.data.name
-        let uri = vscode.Uri.parse(this.schemaContentProvider.scheme + '://' + docName)
-        try {
-            let described = await this.service.describe(node)
-            vscode.commands.executeCommand('vscode.previewHtml', uri, vscode.ViewColumn.One, docName).then((success) => {
-                this.schemaContentProvider.update(uri, described)
-            })
-        }
-        catch (error) {
-            vscode.window.showErrorMessage('Error describing object: ' + error.message)
-        }
+        let panel = new SchemaWebview(this.context, this.service)
+        let docName = this.getOwnerString(node.data.owner) + '.' + node.data.name + ' (' + node.data.type + ')'
+        panel.create(node, docName)
+        this.schemaPanels.push(panel)
     }
 
     /**
@@ -206,16 +195,17 @@ export class DatabaseController {
     async disconnect() {
         this.resultSetPanels.forEach(panel => { panel.close() })
         this.resultSetPanels = []
+        this.schemaPanels.forEach(panel => { panel.close() })
+        this.schemaPanels = []
         this.schemaTreeProvider.clear()
         this.statusBarItem.text = '$(database)'
         // Tell server to disconnect (close current statements and connections)
         try {
             await this.service.disconnect()
             vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', false)
-            console.log('Closed connection')
         }
         catch (err) {
-            console.error('Error closing: ' + err)
+            vscode.window.showErrorMessage('Error closing connection: ' + err)
         }
     }
 

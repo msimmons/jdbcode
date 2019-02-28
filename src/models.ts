@@ -1,18 +1,9 @@
-import { SchemaData, SchemaType, TypeData, ObjectData, TableData, ProcedureData } from 'server-models'
+import { SchemaData, TypeData, ObjectData, TableData, ProcedureData, SqlStatement } from 'server-models'
 import { TreeItem, TreeItemCollapsibleState } from 'vscode'
 
 export interface ResultSet {
     sqlStatement: SqlStatement,
     html: string
-}
-
-export class SqlStatement {
-    columns: string[] = []
-    rows: any[][] = []
-    id: string
-    connection: string
-    sql: string
-    status: string
 }
 
 export interface ObjectDescription {

@@ -156,7 +156,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "./gradlew :grammar:generateGrammarSource; npm run compile; ./gradlew :server:build :server:deploy; cd ui && npm install && ./build.sh",
+    "vscode:prepublish": "./gradlew deploy; npm run compile; cd ui && npm run deploy",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "postinstall": "node ./node_modules/vscode/bin/install",

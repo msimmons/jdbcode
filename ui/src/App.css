@@ -1,0 +1,11 @@
+.App {
+  text-align: center;
+}
+
+.el-table th div {
+  height: 2em;
+}
+
+.el-table td div {
+  height: 2em;
+}
