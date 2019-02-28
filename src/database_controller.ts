@@ -60,11 +60,8 @@ export class DatabaseController {
     }
 
     async connect(connection: ConnectionData, driver: DriverData, command?: string) {
-        // Close any existing result sets (just in case)
-        this.resultSetPanels.forEach((panel) => {
-            panel.close()
-        })
-        this.resultSetPanels = []
+        // Disconnect first if necessary
+        await this.disconnect()
         // Send connection info to server, it will create connection pool if it doesn't already exist
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Connect to DB" }, async (progress) => {
             progress.report({ message: 'Connecting to ' + connection.name })
@@ -206,10 +203,9 @@ export class DatabaseController {
         try {
             await this.service.disconnect()
             vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', false)
-            console.log('Closed connection')
         }
         catch (err) {
-            console.error('Error closing: ' + err)
+            vscode.window.showErrorMessage('Error closing connection: ' + err)
         }
     }
 

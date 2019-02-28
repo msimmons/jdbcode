@@ -66,6 +66,7 @@ export class DatabaseService {
      * Disconnect the current connection
      */
     public async disconnect() {
+        if (!this.currentConnection) return
         await this.jvmcode.send('jdbcode.disconnect', {connection: this.currentConnection})
         this.currentConnection = undefined
         this.schemaNodes = []
