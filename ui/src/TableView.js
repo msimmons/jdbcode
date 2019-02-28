@@ -52,12 +52,12 @@ export class TableView extends BaseView {
 
   columns = [
     { label: 'Name', render: this.renderName },
-    { label: 'Type', prop: 'type' },
-    { label: 'Size', prop: 'size' },
-    { label: 'Default', prop: 'default' },
-    { label: 'Null?', prop: 'nullable' },
-    { label: 'Auto?', prop: 'autoincrement' },
-    { label: 'References', prop: 'references' },
+    { label: 'Type', prop: 'type', renderHeader: this.renderHeader, render: this.renderCell },
+    { label: 'Size', prop: 'size', renderHeader: this.renderHeader, render: this.renderCell },
+    { label: 'Default', prop: 'default', renderHeader: this.renderHeader, render: this.renderCell },
+    { label: 'Null?', prop: 'nullable', renderHeader: this.renderHeader, render: this.renderCell },
+    { label: 'Auto?', prop: 'autoincrement', renderHeader: this.renderHeader, render: this.renderCell },
+    { label: 'References', prop: 'references', renderHeader: this.renderHeader, render: this.renderCell },
     { label: 'Indices', render: this.renderIndices }
   ]
 
@@ -99,7 +99,7 @@ export class TableView extends BaseView {
         <Button size="mini" onClick={this.cancel}>Cancel</Button>
         <div><Icon name="loading" /></div>
         <div>
-          <span>Describing {this.state.tableName}</span>
+          <span>Describing table</span>
         </div>
       </div>
     )

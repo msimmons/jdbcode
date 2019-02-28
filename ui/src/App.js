@@ -4,6 +4,7 @@ import 'element-theme-default'
 import './App.css';
 import { ResultView } from './ResultView'
 import { TableView } from './TableView'
+import { ProcedureView } from './ProcedureView'
 import { TestView } from './TestView'
 import { i18n } from 'element-react'
 import locale from 'element-react/src/locale/lang/en'
@@ -17,6 +18,8 @@ class App extends Component {
         return ( <ResultView /> )
       case 'TABLE_VIEW':
         return ( <TableView /> )
+      case 'PROCEDURE_VIEW':
+        return ( <ProcedureView /> )
       default:
         return ( <TestView /> )
     }

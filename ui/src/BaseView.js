@@ -25,5 +25,18 @@ export class BaseView extends Component {
     this.setState({...this.state, maxHeight: height})
   }
 
+  /**
+   * These renders take care of ensuring that overflow is triggered
+   */
+  renderHeader = (column) => {
+    return (<span style={{whiteSpace: "nowrap"}}>{column.label}</span>)
+  }
+
+  /**
+   * These renders take care of ensuring that overflow is triggered
+   */
+  renderCell = (row, column, ndx) => {
+    return (<span style={{whiteSpace: "nowrap"}}>{row[column.prop]}</span>)
+  }
 }
 

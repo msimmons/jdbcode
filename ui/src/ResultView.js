@@ -60,7 +60,7 @@ export class ResultView extends BaseView {
       let totalLen = 0
       this.colDefs = event.data.result.columns.map((column, ndx) => {
         totalLen += column.length
-        return {label: column, prop: column, columnKey: ndx, render: this.renderCell }
+        return {label: column, prop: column, columnKey: ndx, render: this.renderCell, renderHeader: this.renderHeader }
       })
       this.colDefs.forEach((column) => {
         let relativeWidth = Math.floor((((column.label.length+5)*this.colDefs.length)/totalLen)*100)
@@ -106,10 +106,6 @@ export class ResultView extends BaseView {
     this.setState({statement: this.state.statement, result: newResult})
   }
 
-  renderCell = (row, column, ndx) => {
-    return (<span style={{whiteSpace: "nowrap"}}>{row[column.prop]}</span>)
-  }
-
   renderError() {
     return (
       <div>
@@ -146,7 +142,7 @@ export class ResultView extends BaseView {
             </Button.Group>
           </Layout.Col>
           <Layout.Col span="6">
-            <Input></Input>
+            <Input ></Input>
           </Layout.Col>
         </Layout.Row>
         <Layout.Row type="flex">
