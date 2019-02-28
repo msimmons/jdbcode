@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { BaseView } from './BaseView'
 import { Table, Button, Alert, Icon, Tag } from 'element-react'
 
 const initialState = {
@@ -26,7 +27,7 @@ const tagColors = [
   'turquoise'
 ]
 
-export class TableView extends Component {
+export class TableView extends BaseView {
 
   renderName = (row, column, index) => {
     return (
@@ -62,28 +63,12 @@ export class TableView extends Component {
 
   constructor(props) {
     super(props)
-    this.setState(initialState)
+    this.state = initialState
     /*global acquireVsCodeApi */
     this.vscode = (typeof acquireVsCodeApi === 'function') ? acquireVsCodeApi() : undefined
     window.addEventListener('message', (event) => {
       this.update(event)
     })
-  }
-
-  componentWillMount() {
-    this.updateDimensions()
-  }
-
-  componentDidMount() {
-    window.addEventListener("resize", this.updateDimensions)
-  }
-  componentWillUnmount() {
-    window.removeEventListener("resize", this.updateDimensions)
-  }
-
-  updateDimensions = () => {
-    var height = window.innerHeight - 50
-    this.setState({ ...this.state, maxHeight: height })
   }
 
   update = (event) => {

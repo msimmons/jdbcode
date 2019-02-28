@@ -1,4 +1,5 @@
-import React, { Component } from 'react';
+import React from 'react';
+import { BaseView } from './BaseView'
 import { Table, Button, Input, Layout, Tag, Alert, Icon } from 'element-react'
 
 const initialState = {
@@ -24,34 +25,19 @@ const initialState = {
   maxHeight: 100
 }
 
-export class ResultView extends Component {
+export class ResultView extends BaseView {
 
   vscode = undefined
+  colDefs = []
 
   constructor(props) {
     super(props)
-    this.setState(initialState)
+    this.state = initialState
     /*global acquireVsCodeApi */
     this.vscode = (typeof acquireVsCodeApi === 'function') ? acquireVsCodeApi() : undefined
     window.addEventListener('message', (event) => {
       this.update(event)
     })
-  }
-
-  componentWillMount() {
-    this.updateDimensions()
-  }
-  
-  componentDidMount() {
-    window.addEventListener("resize", this.updateDimensions)
-  }
-  componentWillUnmount() {
-    window.removeEventListener("resize", this.updateDimensions)
-  }
-
-  updateDimensions = () => {
-    var height = window.innerHeight - 50
-    this.setState({...this.state, maxHeight: height})
   }
 
   postMessage(command) {
@@ -70,26 +56,26 @@ export class ResultView extends Component {
   update = (event) => {
     //var height = window.innerHeight - 50
     // Only map the columns once, they won't change
-    if (!this.columns || this.columns.length === 0) {
+    if (!this.colDefs || this.colDefs.length === 0) {
       let totalLen = 0
-      this.columns = event.data.result.columns.map((column, ndx) => {
+      this.colDefs = event.data.result.columns.map((column, ndx) => {
         totalLen += column.length
         return {label: column, prop: column, columnKey: ndx, render: this.renderCell }
       })
-      this.columns.forEach((column) => {
-        let relativeWidth = Math.floor((((column.label.length+5)*this.columns.length)/totalLen)*100)
+      this.colDefs.forEach((column) => {
+        let relativeWidth = Math.floor((((column.label.length+5)*this.colDefs.length)/totalLen)*100)
         column.minWidth = relativeWidth
         column.width = relativeWidth
       })
     }
     let rows = event.data.result.rows.map((row) => {
       let rowObject = {}
-      this.columns.forEach((column, ndx) => {
+      this.colDefs.forEach((column, ndx) => {
         rowObject[column.prop] = row[ndx]
       })
       return rowObject
     })
-    this.setState({statement: event.data.statement, result: event.data.result, rows: rows, columns: this.columns, maxHeight: this.state.maxHeight})
+    this.setState({statement: event.data.statement, result: event.data.result, rows: rows, columns: this.colDefs, maxHeight: this.state.maxHeight})
   }
 
   reexecute = () => {
@@ -165,11 +151,23 @@ export class ResultView extends Component {
         </Layout.Row>
         <Layout.Row type="flex">
           <Layout.Col span="24">
-            <Table data={this.state.rows} columns={this.state.columns} border emptyText="No Data" maxHeight={this.state.maxHeight} />
+            <Table data={this.state.rows} columns={this.state.columns} border emptyText="No Data" maxHeight={this.state.maxHeight} 
+            onHeaderDragEnd={this.headerDragEnd}
+            />
           </Layout.Col>
         </Layout.Row>
       </div>
     );
+  }
+
+  headerDragEnd = (newW, oldW, column, event) => {
+    let colDef = this.colDefs.find((cd) => {
+      return cd.label === column.label
+    })
+    if (colDef) {
+      colDef.width = newW
+      colDef.minWidth = newW
+    }
   }
 
   renderCrud() {
