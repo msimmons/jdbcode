@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React from 'react';
 import { BaseView } from './BaseView'
 import { Table, Button, Alert, Icon, Tag } from 'element-react'
 

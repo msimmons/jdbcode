@@ -1,6 +1,6 @@
 import React from 'react';
 import { BaseView } from './BaseView'
-import { Table, Button, Alert, Icon, Tag } from 'element-react'
+import { Table, Button, Alert, Icon } from 'element-react'
 
 const initialState = {
   status: 'executing',
