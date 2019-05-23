@@ -158,6 +158,8 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
     private fun convertValue(row: ResultSet?, column: Int): Any? {
         if ( row == null ) return ""
         val value = row.getObject(column)
+        val type = row.metaData.getColumnType(column)
+        val typeName = row.metaData.getColumnTypeName(column)
         try {
             return when ( value ) {
                 null -> ""
@@ -175,12 +177,26 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
                 is SQLXML -> value.string
                 is URL -> value.toExternalForm()
                 is String, is Int, is Long, is Float, is Double, is Boolean -> value
-                else -> value.toString()
+                else -> altConvert(row, column, type, value)
             }
         }
         catch (e: Exception) {
-            logger.warn("Exception converting $value (${value::class})", e)
+            logger.warn("Exception converting $value (${value::class}) type=($type, $typeName)", e)
             return value?.toString() ?: ""
+        }
+    }
+
+    private fun altConvert(row: ResultSet, column: Int, type: Int, value: Any) : Any? {
+        return when(type) {
+            Types.REF -> row.getRef(column).baseTypeName
+            Types.REF_CURSOR -> row.getRef(column)
+            Types.ROWID -> row.getRowId(column)
+            Types.SQLXML -> row.getString(column)
+            Types.TIME -> formatDateTime(row.getTime(column))
+            Types.TIMESTAMP -> formatDateTime(row.getTimestamp(column))
+            Types.TIMESTAMP_WITH_TIMEZONE -> formatDateTime(row.getTimestamp(column))
+            Types.TIME_WITH_TIMEZONE -> formatDateTime(row.getTimestamp(column))
+            else -> value.toString()
         }
     }
 
