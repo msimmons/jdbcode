@@ -113,7 +113,7 @@ const initialState = {
     updateCount: 0
   },
   columns: [],
-  rows: [],
+  rows: testData,
   maxHeight: 100
 }
 
