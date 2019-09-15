@@ -104,10 +104,18 @@ export class DatabaseService {
     }
 
     /**
+     * Fetch more results
+     */
+    public async fetch(id: string) : Promise<SqlResult> {
+        let result= await this.jvmcode.send('jdbcode.fetch', {id: id})
+        return result.body as SqlResult
+    }
+
+    /**
      * Re-execute the sql statement
      */
-    public async reexecute(sql: SqlStatement) : Promise<SqlResult> {
-        let result = await this.jvmcode.send('jdbcode.reexecute', sql)
+    public async reexecute(id: string) : Promise<SqlResult> {
+        let result = await this.jvmcode.send('jdbcode.reexecute', {id: id})
         return result.body as SqlResult
     }
 

@@ -1,10 +1,9 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { Uri } from 'vscode';
 import { SqlStatement, SqlResult } from 'server-models'
 import { DatabaseService } from './database_service';
-import { readFileSync } from 'fs';
+import * as fs from 'fs'
 
 export class ResultSetWebview {
 
@@ -53,6 +52,9 @@ export class ResultSetWebview {
 
         this.panel.webview.onDidReceiveMessage(message => {
             switch (message.command) {
+                case 'fetch':
+                    this.fetch()
+                    break;
                 case 'reexecute':
                     this.sqlResult.status = 'executing'
                     this.reexecute()
@@ -72,7 +74,10 @@ export class ResultSetWebview {
                 case 'export':
                     this.export()
                     break
-            }
+                case 'export-all':
+                    this.exportAll()
+                    break
+                }
         }, null, this.context.subscriptions)
 
         this.panel.onDidChangeViewState(event => {
@@ -117,12 +122,23 @@ export class ResultSetWebview {
         }
     }
 
+    private async fetch() {
+        try {
+            let result = await this.service.fetch(this.sqlStatement.id)
+            result.rows = this.sqlResult.rows.concat(result.rows)
+            this.update(result)
+        }
+        catch (error) {
+            vscode.window.showErrorMessage('Error executing SQL: ' + error.message)
+        }
+    }
+
     private async reexecute() {
         // Clear the rows so we aren't sending them back to server
         this.sqlResult.rows = []
         this.sqlResult.columns = []
         try {
-            let result = await this.service.reexecute(this.sqlStatement)
+            let result = await this.service.reexecute(this.sqlStatement.id)
             this.update(result)
         }
         catch (error) {
@@ -179,26 +195,65 @@ export class ResultSetWebview {
         this.service = null
     }
 
-    private export() {
-        let columns = this.sqlResult.columns.map((col) => { return '"' + col + '"' }).join(',')
-        let rows = this.sqlResult.rows.map((row) => {
+    private getHeaderString(delimiter = ',') : string {
+        return this.sqlResult.columns.map((col) => { return '"' + col + '"' }).join(delimiter)
+    }
+
+    private getRowStrings(rows: any[][], delimiter = ',') : string[] {
+        return rows.map((row) => {
             return row.map((value) => {
                 if (typeof value === 'number') return value
                 if (typeof value === 'boolean') return value
                 if (typeof value === 'undefined') return ''
                 if (typeof value === 'object') return ''
                 return '"' + value + '"'
-            }).join(',')
-        }).join('\n')
+            }).join(delimiter)
+        })
+    }
+    
+    private export() {
+        let columns = this.getHeaderString()
+        let rows = this.getRowStrings(this.sqlResult.rows).join('\n')
         let csv = columns + '\n' + rows
         vscode.workspace.openTextDocument({ language: 'csv', content: csv }).then((doc) => {
             vscode.window.showTextDocument(doc)
         })
     }
 
+    private async exportAll() {
+        let file = await vscode.window.showSaveDialog({})
+        if (!file) return
+        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Exporting Data" }, async (progress) => {
+            progress.report({message: `Exporting to ${file.path}`})
+            let wout = fs.createWriteStream(file.path)
+            wout.write(this.getHeaderString()+'\n')
+            let rowStrings = this.getRowStrings(this.sqlResult.rows).join('\n')
+            wout.write(rowStrings)
+            try {
+                let result = this.sqlResult
+                while (result.moreRows) {
+                    result = await this.service.fetch(result.id)
+                    if (result.rows.length > 0) {
+                        rowStrings = this.getRowStrings(result.rows).join('\n')
+                        wout.write('\n' + rowStrings)
+                    }
+                }
+                this.sqlResult.moreRows = false
+                this.update(this.sqlResult)
+            }
+            catch (error) {
+                progress.report({ message: 'Failed to fetch!'})
+                vscode.window.showErrorMessage(`Error fetching: ${error.message}`)
+                wout.write('\nAn Error occurred: '+error.message)
+            }
+            wout.end()
+            wout.close()
+        })
+    }
+
     private getResultHtml() : string {
         let indexPath = this.context.asAbsolutePath('out/ui/index.html')
-        let index = readFileSync(indexPath).toString()
+        let index = fs.readFileSync(indexPath).toString()
         let scriptUri = vscode.Uri.file(this.context.asAbsolutePath('out/ui/'))
         scriptUri = scriptUri.with({scheme: 'vscode-resource'})
         index = index.replace(/\.\//g, scriptUri.toString())

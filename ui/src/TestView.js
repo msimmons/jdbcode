@@ -1,5 +1,6 @@
-import React, { Component } from 'react';
+import React from 'react';
 import { Table, Button } from 'element-react'
+import { BaseView } from './BaseView'
 
 const testColumns = [
   {
@@ -116,7 +117,7 @@ const initialState = {
   maxHeight: 100
 }
 
-export class TestView extends Component {
+export class TestView extends BaseView {
 
   vscode = undefined
   
@@ -125,9 +126,6 @@ export class TestView extends Component {
     this.state = initialState
     /*global acquireVsCodeApi*/
     this.vscode = (typeof acquireVsCodeApi === 'function') ? acquireVsCodeApi() : undefined
-    window.addEventListener('message', (event) => {
-      this.update(event)
-    })
     let totalLen = 0
     testColumns.forEach((column) => {
       totalLen += column.label.length
@@ -136,22 +134,6 @@ export class TestView extends Component {
       let relativeLen = Math.floor(((column.label.length)*testColumns.length/totalLen)*100)
       column.minWidth = relativeLen
     })
-  }
-
-  componentWillMount() {
-    this.updateDimensions()
-  }
-  
-  componentDidMount() {
-    window.addEventListener("resize", this.updateDimensions)
-  }
-  componentWillUnmount() {
-    window.removeEventListener("resize", this.updateDimensions)
-  }
-
-  updateDimensions = () => {
-    var height = window.innerHeight - 50
-    this.setState({...this.state, maxHeight: height})
   }
 
   postMessage(command) {
@@ -185,12 +167,37 @@ export class TestView extends Component {
     this.setState({statement: event.data.statement, result: event.data.result, rows: rows, columns: this.columns, maxHeight: this.state.maxHeight})
   }
 
+  generateColumns(numColumns) {
+    let columns = []
+    for (let i=0; i<numColumns; i++) {
+      let label = 'Column'+i
+      let prop = 'column'+i
+      columns.push({label: label, prop: prop, render: this.renderCell, renderHeader: this.renderHeader})
+    }
+    console.log(columns)
+    return columns
+  }
+
+  generateRows(columns, numRows) {
+    let rows = []
+    for (let i=0; i<numRows; i++) {
+      let rowObject = {}
+      columns.forEach((column, ndx) => {
+        rowObject[column.prop] = 'Column'+ndx+' data row '+i
+      })
+      rows.push(rowObject)
+    }
+    return rows
+  }
+
   renderTable() {
+    let generatedColumns = this.generateColumns(50)
+    let generatedRows = this.generateRows(generatedColumns, 500)
     return (
       <div>
             <Table 
-            data={testData} 
-            columns={testColumns} 
+            data={generatedRows} 
+            columns={generatedColumns} 
             border 
             emptyText="No Data" 
             maxHeight={this.state.maxHeight} 
