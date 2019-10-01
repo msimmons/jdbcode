@@ -75,6 +75,7 @@ export class ResultSetWebview {
                     this.export()
                     break
                 case 'export-all':
+                    this.sqlResult.status = 'executing'
                     this.exportAll()
                     break
                 }
@@ -84,7 +85,6 @@ export class ResultSetWebview {
             this.pendingUpdate()
         }, null, this.context.subscriptions)
 
-        //this.panel.webview.html = this.getSlickDataHtml(sqlStatement)
         this.panel.webview.html = this.getResultHtml()
 
         // Execute the statement
@@ -221,24 +221,28 @@ export class ResultSetWebview {
     }
 
     private async exportAll() {
-        let file = await vscode.window.showSaveDialog({})
+        let file = await vscode.window.showSaveDialog({defaultUri: vscode.workspace.workspaceFolders[0].uri})
         if (!file) return
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Exporting Data" }, async (progress) => {
+            this.sendMessage()
             progress.report({message: `Exporting to ${file.path}`})
             let wout = fs.createWriteStream(file.path)
             wout.write(this.getHeaderString()+'\n')
+            let rowCount = this.sqlResult.rows.length
             let rowStrings = this.getRowStrings(this.sqlResult.rows).join('\n')
             wout.write(rowStrings)
             try {
                 let result = this.sqlResult
                 while (result.moreRows) {
                     result = await this.service.fetch(result.id)
+                    rowCount += result.rows.length
                     if (result.rows.length > 0) {
                         rowStrings = this.getRowStrings(result.rows).join('\n')
                         wout.write('\n' + rowStrings)
                     }
                 }
                 this.sqlResult.moreRows = false
+                this.sqlResult.status = 'executed'
                 this.update(this.sqlResult)
             }
             catch (error) {
@@ -248,6 +252,8 @@ export class ResultSetWebview {
             }
             wout.end()
             wout.close()
+            progress.report({message: `Finished exporting to ${file.path}`})
+            vscode.window.showInformationMessage(`Exported ${rowCount} rows to ${file.path}`)
         })
     }
 
