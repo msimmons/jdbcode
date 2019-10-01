@@ -193,20 +193,23 @@ export class DatabaseController {
      * Disconnect from the current connection if any
      */
     async disconnect() {
-        this.resultSetPanels.forEach(panel => { panel.close() })
-        this.resultSetPanels = []
-        this.schemaPanels.forEach(panel => { panel.close() })
-        this.schemaPanels = []
-        this.schemaTreeProvider.clear()
-        this.statusBarItem.text = '$(database)'
-        // Tell server to disconnect (close current statements and connections)
-        try {
-            await this.service.disconnect()
-            vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', false)
-        }
-        catch (err) {
-            vscode.window.showErrorMessage('Error closing connection: ' + err)
-        }
+        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Disconnecting" }, async (progress) => {
+            progress.report({ message: `Disconnecting  ${this.service.getConnection().name}` })
+            this.resultSetPanels.forEach(panel => { panel.close() })
+            this.resultSetPanels = []
+            this.schemaPanels.forEach(panel => { panel.close() })
+            this.schemaPanels = []
+            this.schemaTreeProvider.clear()
+            this.statusBarItem.text = '$(database)'
+            // Tell server to disconnect (close current statements and connections)
+            try {
+                await this.service.disconnect()
+                vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', false)
+            }
+            catch (err) {
+                vscode.window.showErrorMessage('Error closing connection: ' + err)
+            }
+        })
     }
 
     private getOwnerString(owner: ObjectOwner) {

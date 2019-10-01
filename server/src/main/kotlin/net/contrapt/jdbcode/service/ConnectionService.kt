@@ -78,6 +78,11 @@ open class ConnectionService {
         return statement.fetch()
     }
 
+    open fun fetch(id: String) : SqlResult {
+        val statement = statements[id] ?: throw IllegalArgumentException("Unknown statement id $id")
+        return statement.fetch()
+    }
+
     open fun reexecute(id: String) : SqlResult {
         val statement = statements[id] ?: throw IllegalArgumentException("Unknown statement id $id")
         statement.execute()

@@ -54,8 +54,6 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
             else -> StatementType.crud
         }
         results = statement.resultSet
-        // Commit immediately for selects to release any locks
-        if (updateCount <= 0) connection.commit()
     }
 
     /**
@@ -75,6 +73,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
         var moreRows = false
         // Fetch rows
         val fetchTime = measureTimeMillis {
+            rows.clear()
             while ( results?.next() ?: false ) {
                 val row = mutableListOf<Any?>()
                 (1..columnCount).forEach {
@@ -87,6 +86,8 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
                 }
             }
         }
+        // Commit for selects with no more rows (or 0 row dml)
+        if (updateCount <= 0 && !moreRows) connection.commit()
         return SqlResult(sqlStatement.id, status, type, updateCount, moreRows, executionCount, executionTime, fetchTime, columns, rows)
     }
 

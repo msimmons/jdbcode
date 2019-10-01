@@ -78,6 +78,12 @@ export class ResultView extends BaseView {
     this.setState({statement: event.data.statement, result: event.data.result, rows: rows, columns: this.colDefs, maxHeight: this.state.maxHeight})
   }
 
+  fetch = () => {
+    let newResult = {...this.state.result, status: 'executing'}
+    this.setState({statement: this.state.statement, result: newResult})
+    this.postMessage('fetch')
+  }
+
   reexecute = () => {
     let newResult = {...this.state.result, status: 'executing'}
     this.setState({statement: this.state.statement, result: newResult})
@@ -86,6 +92,10 @@ export class ResultView extends BaseView {
 
   export = () => {
     this.postMessage('export')
+  }
+
+  exportAll = () => {
+    this.postMessage('export-all')
   }
 
   commit = () => {
@@ -139,6 +149,8 @@ export class ResultView extends BaseView {
             <Button.Group>
               <Button size="mini" onClick={this.reexecute}>Refresh</Button>
               <Button size="mini" disabled={this.state.result.rows.length===0} onClick={this.export}>Export</Button>
+              <Button size="mini" disabled={this.state.result.rows.length===0 || !this.state.result.moreRows} onClick={this.fetch}>Fetch</Button>
+              <Button size="mini" disabled={this.state.result.rows.length===0 || !this.state.result.moreRows} onClick={this.exportAll}>Export All</Button>
             </Button.Group>
           </Layout.Col>
           <Layout.Col span="6">
