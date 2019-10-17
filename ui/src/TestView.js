@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Card, CardContent, Chip, Paper, CardHeader, Typography } from '@material-ui/core'
+import { Card, CardContent, Chip, Paper, CardHeader, Typography } from '@material-ui/core'
 import RefreshIcon from '@material-ui/icons/Refresh'
 import SaveIcon from '@material-ui/icons/Save'
 import SaveAllIcon from '@material-ui/icons/SaveAlt'
@@ -9,7 +9,6 @@ import {Grid as MUIGrid} from '@material-ui/core'
 import { FilteringState, IntegratedFiltering } from '@devexpress/dx-react-grid'
 import { Grid, VirtualTable, TableHeaderRow, TableColumnResizing, TableFilterRow } from '@devexpress/dx-react-grid-material-ui'
 import { BaseView } from './BaseView'
-import { makeStyles } from '@material-ui/core/styles';
 
 const initialState = {
   statement: {
@@ -33,22 +32,6 @@ const initialState = {
   rows: [],
   maxHeight: 100
 }
-
-const useStyles = makeStyles(theme => ({
-  root: {
-    width: 'fit-content',
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: theme.shape.borderRadius,
-    backgroundColor: theme.palette.background.paper,
-    color: theme.palette.text.secondary,
-    '& svg': {
-      margin: theme.spacing(2),
-    },
-    '& hr': {
-      margin: theme.spacing(0, 0.5),
-    },
-  },
-}));
 
 export class TestView extends BaseView {
 
@@ -128,7 +111,6 @@ export class TestView extends BaseView {
   renderTable() {
     const Root = props => <Grid.Root {...props} style={{ height: '100%' }} />
     const chipStyle = { 'margin-right': '10px' }
-    const tableStyle = { 'border-right': '1px solid' }
 
     let generatedColumns = this.generateColumns(25)
     let generatedRows = this.generateRows(generatedColumns, 250)
@@ -138,8 +120,8 @@ export class TestView extends BaseView {
         <MUIGrid>
             Executions <Chip variant="outlined" size="small" clickable label="1 (20ms)" title="Re-execute" icon={<RefreshIcon/>} style={chipStyle}/>
             Rows <Chip variant="outlined" size="small" clickable label="30" title="Export" icon={<SaveAllIcon/>} style={chipStyle}/>
-            More? <Chip variant="outlined" size="small" clickable label="true" clickable title="Fetch More" icon={<CachedIcon/>} style={chipStyle}/>
-            Export All <Chip variant="outlined" size="small" clickable label="" clickable title="Export All" icon={<SaveIcon/>} style={chipStyle}/>
+            More? <Chip variant="outlined" size="small" clickable label="true" title="Fetch More" icon={<CachedIcon/>} style={chipStyle}/>
+            Export All <Chip variant="outlined" size="small" clickable label="" title="Export All" icon={<SaveIcon/>} style={chipStyle}/>
         </MUIGrid>
         <Paper style={{ height: '800px' }}>
           <Grid rows={generatedRows} columns = {generatedColumns} rootComponent={Root} >
@@ -170,7 +152,7 @@ export class TestView extends BaseView {
           {this.state.statement.sql}
         </Typography>
 
-        <Chip background="green" label={4} title="Hello" size="small" style={{background: "lavender"}}>
+        <Chip label={4} title="Hello" size="small" style={{background: "lavender"}}>
         </Chip>
       </div>
     )

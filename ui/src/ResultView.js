@@ -182,8 +182,8 @@ export class ResultView extends BaseView {
         <MUIGrid>
             Executions <Chip variant="outlined" size="small" clickable label={this.executionsString()} title="Re-execute" icon={<RefreshIcon/>} style={chipStyle} onClick={this.reexecute}/>
             Rows <Chip variant="outlined" size="small" clickable label={this.state.rows.length} title="Export" icon={<SaveAllIcon/>} style={chipStyle} disabled={this.noRows()} onClick={this.export}/>
-            More? <Chip variant="outlined" size="small" clickable label={this.moreRowsString()} clickable title="Fetch More" icon={<CachedIcon/>} style={chipStyle} disabled={this.noMore()} onClick={this.fetch}/>
-            Export All <Chip variant="outlined" size="small" clickable label="" clickable title="Export All" icon={<SaveIcon/>} style={chipStyle} disabled={this.noMore()} onClick={this.exportAll}/>
+            More? <Chip variant="outlined" size="small" clickable label={this.moreRowsString()} title="Fetch More" icon={<CachedIcon/>} style={chipStyle} disabled={this.noMore()} onClick={this.fetch}/>
+            Export All <Chip variant="outlined" size="small" clickable label="" title="Export All" icon={<SaveIcon/>} style={chipStyle} disabled={this.noMore()} onClick={this.exportAll}/>
         </MUIGrid>
         <Paper style={{ height: this.state.maxHeight }}>
           <Grid rows={this.state.rows} columns = {this.state.columns} rootComponent={Root}>
@@ -210,8 +210,8 @@ export class ResultView extends BaseView {
         <MUIGrid>
             Executed <Chip variant="outlined" size="small" label={this.executionsString()} style={chipStyle}/>
             Rows Affected <Chip variant="outlined" size="small" label={this.state.result.updateCount} style={chipStyle}/>
-            <Chip variant="outlined" size="small" clickable label="Commit" clickable title="Commit" icon={<CommitIcon color="primary"/>} style={chipStyle} disabled={!this.inTransaction()} onClick={this.commit}/>
-            <Chip variant="outlined" size="small" clickable label="Rollback" clickable title="Rollback" icon={<RollbackIcon color="error"/>} style={chipStyle} disabled={!this.inTransaction()} onClick={this.rollback}/>
+            <Chip variant="outlined" size="small" clickable label="Commit" title="Commit" icon={<CommitIcon color="primary"/>} style={chipStyle} disabled={!this.inTransaction()} onClick={this.commit}/>
+            <Chip variant="outlined" size="small" clickable label="Rollback" title="Rollback" icon={<RollbackIcon color="error"/>} style={chipStyle} disabled={!this.inTransaction()} onClick={this.rollback}/>
             Status <Chip variant="outlined" size="small" label={this.state.result.status} style={chipStyle}/>
         </MUIGrid>
         <pre>{this.state.statement.sql}</pre>
