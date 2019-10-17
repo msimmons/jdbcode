@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, Chip, Paper, CardHeader, Typography } from '@material-ui/core'
+import { Badge, Card, CardContent, Chip, Paper, CardHeader, Typography } from '@material-ui/core'
 import RefreshIcon from '@material-ui/icons/Refresh'
 import SaveIcon from '@material-ui/icons/Save'
 import SaveAllIcon from '@material-ui/icons/SaveAlt'
@@ -169,6 +169,9 @@ export class TestView extends BaseView {
         <Typography variant="body1" component="pre" style={{margin: '10px'}}>
           {this.state.statement.sql}
         </Typography>
+
+        <Chip background="green" label={4} title="Hello" size="small" style={{background: "lavender"}}>
+        </Chip>
       </div>
     )
   }

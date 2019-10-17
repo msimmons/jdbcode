@@ -1,6 +1,9 @@
 import React from 'react';
 import { BaseView } from './BaseView'
-import { Table, Button, Alert, Icon, Tag } from 'element-react'
+import {CircularProgress, Chip, Card, CardHeader, CardContent, Typography, TableHead, TableRow, TableBody, TableCell, Table} from '@material-ui/core'
+import CancelIcon from '@material-ui/icons/Cancel'
+import StarIcon from '@material-ui/icons/StarBorder'
+import ErrorIcon from '@material-ui/icons/Error'
 
 const initialState = {
   status: 'executing',
@@ -31,16 +34,24 @@ export class TableView extends BaseView {
 
   renderName = (row, column, index) => {
     return (
-      <span>{row.name} {row.keySequence ? <Icon name="star-off"/> : ""}</span>
+      <span>{row.name} {row.keySequence ? <StarIcon/> : ""}</span>
     )
   }
 
   renderIndices = (row, column, index) => {
     return row.indices.map((ndx) =>
       <span title={`${ndx.name} (${ndx.unique ? 'unique' : ''} ${ndx.direction})`}>
-        <Tag color={this.tagColor(ndx)} >{ndx.position}</Tag>
+        <Chip label={ndx.position} style={this.tagStyle(ndx)}/>
       </span>
     )
+  }
+
+  tagStyle = (index) => {
+    let ndx = this.state.table.indices.findIndex((name) => {
+      return name === index.name
+    })
+    let color = ndx > tagColors.length-1 ? 'gray' : tagColors[ndx]
+    return {background: `${color}`}
   }
 
   tagColor = (index) => {
@@ -76,7 +87,6 @@ export class TableView extends BaseView {
     if (!table) {
       return
     }
-    console.log(table)
     let rows = table.columns
     this.setState({ ...this.state, table: table, rows: rows, status: event.data.status, error: event.data.error})
   }
@@ -88,7 +98,14 @@ export class TableView extends BaseView {
   renderError() {
     return (
       <div>
-        <Alert showIcon type="error" title={this.state.table.name} description={this.state.error} closable={false} />
+        <Card elevation={4} style={{border: '1px solid red', 'margin': '10px'}}>
+          <CardHeader title="Error describing" subheader={this.state.table.name} avatar={<ErrorIcon color="error"/>}/>
+          <CardContent>
+            <Typography variant="h6" color="default" component="p">
+              {this.state.error}
+            </Typography>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -96,21 +113,36 @@ export class TableView extends BaseView {
   renderExecuting() {
     return (
       <div>
-        <Button size="mini" onClick={this.cancel}>Cancel</Button>
-        <div><Icon name="loading" /></div>
-        <div>
-          <span>Describing table</span>
-        </div>
+        <CircularProgress color="default"/>
+        <Chip size="small" clickable onClick={this.cancel} label="Cancel" icon={<CancelIcon/>}/>
+        <pre>Describing Table</pre>
       </div>
     )
   }
 
   renderTable() {
     return (
-      <div >
-        <Table data={this.state.rows} columns={this.columns} border emptyText="No Data" maxHeight={this.state.maxHeight} />
+      <div>
+        <Table size="small" maxHeight={this.state.maxHeight} stickyHeader>
+          <TableHead>
+            <TableRow>
+              {this.columns.map(col => {
+                return <TableCell align="left">{col.label}</TableCell>
+              })}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {this.state.rows.map(row => {
+              return <TableRow key={row.name}>
+                {this.columns.map(col => {
+                  return <TableCell align="left">{col.render(row, col)}</TableCell>
+                })}
+              </TableRow>
+            })}
+          </TableBody>
+        </Table>
       </div>
-    );
+    )
   }
 
   render() {

@@ -31,8 +31,12 @@ export class BaseView extends Component {
   /**
    * These renders take care of ensuring that overflow is triggered
    */
-  renderCell = (row, column, ndx) => {
+  oldRenderCell = (row, column, ndx) => {
     return (<span style={{whiteSpace: "nowrap"}}>{row[column.prop]}</span>)
+  }
+
+  renderCell = (row, column, ndx) => {
+    return (<span>{row[column.prop]}</span>)
   }
 }
 

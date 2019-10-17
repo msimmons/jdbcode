@@ -1,6 +1,8 @@
 import React from 'react';
 import { BaseView } from './BaseView'
-import { Table, Button, Alert, Icon } from 'element-react'
+import {CircularProgress, Chip, Card, CardHeader, CardContent, Typography, TableHead, TableRow, TableBody, TableCell, Table} from '@material-ui/core'
+import CancelIcon from '@material-ui/icons/Cancel'
+import ErrorIcon from '@material-ui/icons/Error'
 
 const initialState = {
   status: 'executing',
@@ -47,7 +49,14 @@ export class ProcedureView extends BaseView {
   renderError() {
     return (
       <div>
-        <Alert showIcon type="error" title={this.state.procedure.name} description={this.state.error} closable={false} />
+        <Card elevation={4} style={{border: '1px solid red', 'margin': '10px'}}>
+          <CardHeader title="Error describing" subheader={this.state.table.name} avatar={<ErrorIcon color="error"/>}/>
+          <CardContent>
+            <Typography variant="h6" color="default" component="p">
+              {this.state.error}
+            </Typography>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -55,21 +64,36 @@ export class ProcedureView extends BaseView {
   renderExecuting() {
     return (
       <div>
-        <Button size="mini" onClick={this.cancel}>Cancel</Button>
-        <div><Icon name="loading" /></div>
-        <div>
-          <span>Describing procedure</span>
-        </div>
+        <CircularProgress color="default"/>
+        <Chip size="small" clickable onClick={this.cancel} label="Cancel" icon={<CancelIcon/>}/>
+        <pre>Describing Table</pre>
       </div>
     )
   }
 
   renderProcedure() {
     return (
-      <div >
-        <Table data={this.state.rows} columns={this.columns} border emptyText="No Data" maxHeight={this.state.maxHeight} />
+      <div>
+        <Table size="small" maxHeight={this.state.maxHeight} stickyHeader>
+          <TableHead>
+            <TableRow>
+              {this.columns.map(col => {
+                return <TableCell align="left">{col.label}</TableCell>
+              })}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {this.state.rows.map(row => {
+              return <TableRow key={row.name}>
+                {this.columns.map(col => {
+                  return <TableCell align="left">{col.render(row, col)}</TableCell>
+                })}
+              </TableRow>
+            })}
+          </TableBody>
+        </Table>
       </div>
-    );
+    )
   }
 
   render() {
