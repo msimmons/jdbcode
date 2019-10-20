@@ -1,98 +1,14 @@
 import React from 'react';
-import { Table, Button } from 'element-react'
+import { CircularProgress, Chip, Paper, Typography } from '@material-ui/core'
+import RefreshIcon from '@material-ui/icons/Refresh'
+import SaveIcon from '@material-ui/icons/Save'
+import SaveAllIcon from '@material-ui/icons/SaveAlt'
+import CachedIcon from '@material-ui/icons/Cached'
+import CancelIcon from '@material-ui/icons/Cancel'
+import {Grid as MUIGrid} from '@material-ui/core'
+import { FilteringState, IntegratedFiltering } from '@devexpress/dx-react-grid'
+import { Grid, VirtualTable, TableHeaderRow, TableColumnResizing, TableFilterRow } from '@devexpress/dx-react-grid-material-ui'
 import { BaseView } from './BaseView'
-
-const testColumns = [
-  {
-    label: "Date",
-    prop: "date",
-    align: 'center',
-    minWidth: 100
-  },
-  {
-    label: "Name",
-    prop: "name",
-    minWidth: 100
-  },
-  {
-    label: "State",
-    prop: "state",
-    minWidth: 120
-  },
-  {
-    label: "City",
-    prop: "city",
-    minWidth: 100
-  },
-  {
-    label: "Address",
-    prop: "address",
-    minWidth: 170
-  },
-  {
-    label: "Zip",
-    prop: "zip",
-    minWidth: 70
-  },
-  {
-    label: "Operations",
-    minWidth: 250,
-    render: (row, column, index)=>{
-      return <span><Button type="text" size="small" >Remove</Button></span>
-    }
-  }
-]
-
-const testData = [{
-  date: '2016-05-03',
-  name: 'Tom',
-  state: 'California',
-  city: 'Los Angeles',
-  address: 'No. 189, Grove St, Los Angeles',
-  zip: 'CA 90036'
-}, {
-  date: '2016-05-02',
-  name: 'Tom',
-  state: 'California',
-  city: 'Los Angeles',
-  address: 'No. 189, Grove St, Los Angeles',
-  zip: 'CA 90036'
-}, {
-  date: '2016-05-04',
-  name: 'Tom',
-  state: 'California',
-  city: 'Los Angeles',
-  address: 'No. 189, Grove St, Los Angeles',
-  zip: 'CA 90036'
-}, {
-  date: '2016-05-01',
-  name: 'Tom',
-  state: 'California',
-  city: 'Los Angeles',
-  address: 'No. 189, Grove St, Los Angeles',
-  zip: 'CA 90036'
-}, {
-  date: '2016-05-08',
-  name: 'Tom',
-  state: 'California',
-  city: 'Los Angeles',
-  address: 'No. 189, Grove St, Los Angeles',
-  zip: 'CA 90036'
-}, {
-  date: '2016-05-06',
-  name: 'Tom',
-  state: 'California',
-  city: 'Los Angeles',
-  address: 'No. 189, Grove St, Los Angeles',
-  zip: 'CA 90036'
-}, {
-  date: '2016-05-07',
-  name: 'Tom',
-  state: 'California',
-  city: 'Los Angeles',
-  address: 'No. 189, Grove St, Los Angeles',
-  zip: 'CA 90036'
-}]
 
 const initialState = {
   statement: {
@@ -101,7 +17,7 @@ const initialState = {
   },
   result: {
     columns: [],
-    error: undefined,
+    error: 'The text of the error, could be longish',
     executionCount: 0,
     executionTime: 0,
     fetchTime: 0,
@@ -113,7 +29,7 @@ const initialState = {
     updateCount: 0
   },
   columns: [],
-  rows: testData,
+  rows: [],
   maxHeight: 100
 }
 
@@ -126,14 +42,6 @@ export class TestView extends BaseView {
     this.state = initialState
     /*global acquireVsCodeApi*/
     this.vscode = (typeof acquireVsCodeApi === 'function') ? acquireVsCodeApi() : undefined
-    let totalLen = 0
-    testColumns.forEach((column) => {
-      totalLen += column.label.length
-    })
-    testColumns.forEach((column) => {
-      let relativeLen = Math.floor(((column.label.length)*testColumns.length/totalLen)*100)
-      column.minWidth = relativeLen
-    })
   }
 
   postMessage(command) {
@@ -172,10 +80,18 @@ export class TestView extends BaseView {
     for (let i=0; i<numColumns; i++) {
       let label = 'Column'+i
       let prop = 'column'+i
-      columns.push({label: label, prop: prop, render: this.renderCell, renderHeader: this.renderHeader})
+      //columns.push({label: label, prop: prop, render: this.renderCell, renderHeader: this.renderHeader})
+      columns.push({name: prop, title: label})
     }
-    console.log(columns)
     return columns
+  }
+
+  generateColumnWidths(columns) {
+    let widths = []
+    columns.forEach((column, index) => {
+      widths.push({columnName: column.name, width: column.title.length * 20})
+    })
+    return widths
   }
 
   generateRows(columns, numRows) {
@@ -183,7 +99,8 @@ export class TestView extends BaseView {
     for (let i=0; i<numRows; i++) {
       let rowObject = {}
       columns.forEach((column, ndx) => {
-        rowObject[column.prop] = 'Column'+ndx+' data row '+i
+        rowObject[column.name] = 'Column'+ndx+' data row '+i
+        rowObject['id'] = i
       })
       rows.push(rowObject)
     }
@@ -191,23 +108,57 @@ export class TestView extends BaseView {
   }
 
   renderTable() {
-    let generatedColumns = this.generateColumns(50)
-    let generatedRows = this.generateRows(generatedColumns, 500)
+    const Root = props => <Grid.Root {...props} style={{ height: '100%' }} />
+    const chipStyle = { 'marginRight': '10px' }
+
+    let generatedColumns = this.generateColumns(25)
+    let generatedRows = this.generateRows(generatedColumns, 250)
+    let widths = this.generateColumnWidths(generatedColumns)
     return (
       <div>
-            <Table 
-            data={generatedRows} 
-            columns={generatedColumns} 
-            border 
-            emptyText="No Data" 
-            maxHeight={this.state.maxHeight} 
-            />
+        <MUIGrid>
+            Executions <Chip variant="outlined" size="small" clickable label="1 (20ms)" title="Re-execute" icon={<RefreshIcon/>} style={chipStyle}/>
+            Rows <Chip variant="outlined" size="small" clickable label="30" title="Export" icon={<SaveAllIcon/>} style={chipStyle}/>
+            More? <Chip variant="outlined" size="small" clickable label="true" title="Fetch More" icon={<CachedIcon/>} style={chipStyle}/>
+            Export All <Chip variant="outlined" size="small" clickable label="" title="Export All" icon={<SaveIcon/>} style={chipStyle}/>
+        </MUIGrid>
+        <Paper style={{ height: '800px' }}>
+          <Grid rows={generatedRows} columns = {generatedColumns} rootComponent={Root} >
+            <FilteringState defaultFilters={[]} />
+            <IntegratedFiltering />
+            <VirtualTable height="auto" />
+            <TableColumnResizing defaultColumnWidths = {widths}/>
+            <TableHeaderRow />
+            <TableFilterRow />
+          </Grid>
+        </Paper>
       </div>
     );
+  }
+
+  subRenderError() {
+    return (
+      <div>
+        {this.renderError(this.state.result.error, this.state.statement.sql)}
+
+        <Chip label={4} title="Hello" size="small" style={{background: "lavender"}}>
+        </Chip>
+
+        {this.renderExecuting(this.state.statement.sql, ()=>{console.log('cancel')})}
+
+        <Typography variant="body1" component="pre" style={{margin: '10px'}}>
+          {this.state.statement.sql}
+        </Typography>
+        <div>
+        <CircularProgress/>
+        <Chip size="small" onClick={this.cancel} label="Cancel" icon={<CancelIcon/>}/>
+        <pre>{this.state.statement ? this.state.statement.sql : ""}</pre>
+        </div>
+      </div>
+    )
   }
 
   render() {
     return this.renderTable()
   }
 }
-

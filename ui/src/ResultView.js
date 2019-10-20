@@ -1,6 +1,14 @@
 import React from 'react';
 import { BaseView } from './BaseView'
-import { Table, Button, Input, Layout, Tag, Alert, Icon } from 'element-react'
+import {Chip, Paper} from '@material-ui/core'
+import {Grid as MUIGrid} from '@material-ui/core'
+import RefreshIcon from '@material-ui/icons/Refresh'
+import SaveIcon from '@material-ui/icons/Save'
+import SaveAllIcon from '@material-ui/icons/SaveAlt'
+import CachedIcon from '@material-ui/icons/Cached'
+import RollbackIcon from '@material-ui/icons/Undo'
+import CommitIcon from '@material-ui/icons/Check'
+import { Grid, VirtualTable, TableHeaderRow, TableColumnResizing } from '@devexpress/dx-react-grid-material-ui'
 
 const initialState = {
   statement: {
@@ -22,6 +30,7 @@ const initialState = {
   },
   columns: [],
   rows: [],
+  widths: [],
   maxHeight: 100
 }
 
@@ -53,29 +62,48 @@ export class ResultView extends BaseView {
     return this.state.result.status === 'executed' && this.state.result.type === 'crud'
   }
 
+  noRows = () => {
+    return this.state.rows.length===0
+  }
+
+  noMore = () => {
+    return this.noRows() || !this.state.result.moreRows
+  }
+
+  moreRowsString = () => {
+    return this.state.result.moreRows ? 'true' : 'false'
+  }
+
+  executionsString = () => {
+    return `${this.state.result.executionCount} (${this.state.result.executionTime}ms)`
+  }
+
   update = (event) => {
-    //var height = window.innerHeight - 50
     // Only map the columns once, they won't change
+    let widths = this.state.widths
     if (!this.colDefs || this.colDefs.length === 0) {
       let totalLen = 0
       this.colDefs = event.data.result.columns.map((column, ndx) => {
         totalLen += column.length
-        return {label: column, prop: column, columnKey: ndx, render: this.renderCell, renderHeader: this.renderHeader }
+        //return {label: column, prop: column, columnKey: ndx, render: this.renderCell, renderHeader: this.renderHeader }
+        return {name: column, title: column}
       })
       this.colDefs.forEach((column) => {
-        let relativeWidth = Math.floor((((column.label.length+5)*this.colDefs.length)/totalLen)*100)
+        let relativeWidth = Math.floor((((column.title.length+5)*this.colDefs.length)/totalLen)*100)
         column.minWidth = relativeWidth
         column.width = relativeWidth
+        widths.push({columnName: column.name, width: relativeWidth})
       })
     }
     let rows = event.data.result.rows.map((row) => {
       let rowObject = {}
       this.colDefs.forEach((column, ndx) => {
-        rowObject[column.prop] = row[ndx]
+        rowObject[column.name] = row[ndx]
+        rowObject['id'] = ndx
       })
       return rowObject
     })
-    this.setState({statement: event.data.statement, result: event.data.result, rows: rows, columns: this.colDefs, maxHeight: this.state.maxHeight})
+    this.setState({statement: event.data.statement, result: event.data.result, rows: rows, columns: this.colDefs, maxHeight: this.state.maxHeight, widths: widths})
   }
 
   fetch = () => {
@@ -116,99 +144,60 @@ export class ResultView extends BaseView {
     this.setState({statement: this.state.statement, result: newResult})
   }
 
-  renderError() {
-    return (
-      <div>
-        <Alert showIcon type="error" title="SQL Error" description={this.state.result.error} closable={false}/>
-        <pre>{this.state.statement.sql}</pre>
-      </div>
-    )
-  }
-
-  renderExecuting() {
-    return (
-      <div>
-        <div><Icon name="loading"/></div>
-        <Button size="mini" onClick={this.cancel}>Cancel</Button>
-        <pre>{this.state.statement ? this.state.statement.sql : ""}</pre>
-      </div>
-    )
-  }
-
   renderQuery() {
+    const Root = props => <Grid.Root {...props} style={{ height: '100%' }} />
+    const chipStyle = { 'margin-right': '10px' }
     return (
       <div>
-        <Layout.Row>
-          <Layout.Col span="8">
-            Executions <Tag type="gray" size="mini">{this.state.result.executionCount}</Tag>&nbsp;
-            Elapsed <Tag type="gray" size="mini">{this.state.result.executionTime}</Tag>&nbsp;
-            Rows <Tag type="gray" size="mini">{this.state.result.rows.length}</Tag>&nbsp;
-            More? <Tag type="gray" size="mini">{this.state.result.moreRows ? 'true' : 'false'}</Tag>&nbsp;
-          </Layout.Col>
-          <Layout.Col span="10">
-            <Button.Group>
-              <Button size="mini" onClick={this.reexecute}>Refresh</Button>
-              <Button size="mini" disabled={this.state.result.rows.length===0} onClick={this.export}>Export</Button>
-              <Button size="mini" disabled={this.state.result.rows.length===0 || !this.state.result.moreRows} onClick={this.fetch}>Fetch</Button>
-              <Button size="mini" disabled={this.state.result.rows.length===0 || !this.state.result.moreRows} onClick={this.exportAll}>Export All</Button>
-            </Button.Group>
-          </Layout.Col>
-          <Layout.Col span="6">
-            <Input ></Input>
-          </Layout.Col>
-        </Layout.Row>
-        <Layout.Row type="flex">
-          <Layout.Col span="24">
-            <Table data={this.state.rows} columns={this.state.columns} border emptyText="No Data" maxHeight={this.state.maxHeight} 
-            onHeaderDragEnd={this.headerDragEnd}
-            />
-          </Layout.Col>
-        </Layout.Row>
+        <MUIGrid>
+            Executions <Chip variant="outlined" size="small" clickable label={this.executionsString()} title="Re-execute" icon={<RefreshIcon/>} style={chipStyle} onClick={this.reexecute}/>
+            Rows <Chip variant="outlined" size="small" clickable label={this.state.rows.length} title="Export" icon={<SaveAllIcon/>} style={chipStyle} disabled={this.noRows()} onClick={this.export}/>
+            More? <Chip variant="outlined" size="small" clickable label={this.moreRowsString()} title="Fetch More" icon={<CachedIcon/>} style={chipStyle} disabled={this.noMore()} onClick={this.fetch}/>
+            Export All <Chip variant="outlined" size="small" clickable label="" title="Export All" icon={<SaveIcon/>} style={chipStyle} disabled={this.noMore()} onClick={this.exportAll}/>
+        </MUIGrid>
+        <Paper style={{ height: this.state.maxHeight }}>
+          <Grid rows={this.state.rows} columns = {this.state.columns} rootComponent={Root}>
+            <VirtualTable height="auto"/>
+            <TableColumnResizing defaultColumnWidths = {this.state.widths.slice()} onColumnWidthsChange={this.columnWidthsChanged}/>
+            <TableHeaderRow />
+          </Grid>
+        </Paper>
       </div>
     );
   }
 
-  headerDragEnd = (newW, oldW, column, event) => {
-    let colDef = this.colDefs.find((cd) => {
-      return cd.label === column.label
-    })
-    if (colDef) {
-      colDef.width = newW
-      colDef.minWidth = newW
-    }
+  /** 
+   * Handle when column widths change by setting the new widths in the state
+  */
+  columnWidthsChanged = (newWidths) => {
+    this.state.widths = newWidths
   }
 
   renderCrud() {
+    const chipStyle = { 'margin-right': '10px' }
     return (
       <div >
-        <Layout.Row>
-            Executions <Tag type="gray" size="mini">{this.state.result.executionCount}</Tag>&nbsp;
-            Elapsed <Tag type="gray" size="mini">{this.state.result.executionTime}</Tag>&nbsp;
-            Rows Affected <Tag type="gray" size="mini">{this.state.result.updateCount}</Tag>&nbsp;
-            Status <Tag type="gray" size="mini">{this.state.result.status}</Tag>&nbsp;
-        </Layout.Row>
-        <Layout.Row>
-          <Button.Group>
-            <Button size="mini" disabled={!this.inTransaction()} onClick={this.commit}>Commit</Button>
-            <Button size="mini" disabled={!this.inTransaction()} onClick={this.rollback}>Rollback</Button>
-          </Button.Group>
-        </Layout.Row>
-        <Layout.Row>
-          <pre>{this.state.statement.sql}</pre>
-        </Layout.Row>
+        <MUIGrid>
+            Executed <Chip variant="outlined" size="small" label={this.executionsString()} style={chipStyle}/>
+            Rows Affected <Chip variant="outlined" size="small" label={this.state.result.updateCount} style={chipStyle}/>
+            <Chip variant="outlined" size="small" clickable label="Commit" title="Commit" icon={<CommitIcon color="primary"/>} style={chipStyle} disabled={!this.inTransaction()} onClick={this.commit}/>
+            <Chip variant="outlined" size="small" clickable label="Rollback" title="Rollback" icon={<RollbackIcon color="error"/>} style={chipStyle} disabled={!this.inTransaction()} onClick={this.rollback}/>
+            Status <Chip variant="outlined" size="small" label={this.state.result.status} style={chipStyle}/>
+        </MUIGrid>
+        <pre>{this.state.statement.sql}</pre>
       </div>
     );
   }
 
   render() {
     if (!this.state.result) {
-      return this.renderExecuting()
+      return this.renderExecuting(this.state.statement.sql, this.cancel)
     }
     if (this.state.result.error) {
-      return this.renderError()
+      return this.renderError(this.state.result.error, this.state.statement.sql)
     }
     if (this.state.result.status === 'executing') {
-      return this.renderExecuting()
+      return this.renderExecuting(this.state.statement.sql, this.cancel)
     }
     if (this.state.result.type === 'query') {
       return this.renderQuery()
@@ -216,7 +205,7 @@ export class ResultView extends BaseView {
     if (this.state.result.type === 'crud') {
       return this.renderCrud()
     }
-    return this.renderExecuting()
+    return this.renderExecuting(this.state.statement.sql, this.cancel)
   }
 }
 

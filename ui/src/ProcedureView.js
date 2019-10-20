@@ -1,6 +1,6 @@
 import React from 'react';
 import { BaseView } from './BaseView'
-import { Table, Button, Alert, Icon } from 'element-react'
+import {TableHead, TableRow, TableBody, TableCell, Table} from '@material-ui/core'
 
 const initialState = {
   status: 'executing',
@@ -44,40 +44,37 @@ export class ProcedureView extends BaseView {
     console.log('Canceling')
   }
 
-  renderError() {
-    return (
-      <div>
-        <Alert showIcon type="error" title={this.state.procedure.name} description={this.state.error} closable={false} />
-      </div>
-    )
-  }
-
-  renderExecuting() {
-    return (
-      <div>
-        <Button size="mini" onClick={this.cancel}>Cancel</Button>
-        <div><Icon name="loading" /></div>
-        <div>
-          <span>Describing procedure</span>
-        </div>
-      </div>
-    )
-  }
-
   renderProcedure() {
     return (
-      <div >
-        <Table data={this.state.rows} columns={this.columns} border emptyText="No Data" maxHeight={this.state.maxHeight} />
+      <div>
+        <Table size="small" maxHeight={this.state.maxHeight} stickyHeader>
+          <TableHead>
+            <TableRow>
+              {this.columns.map(col => {
+                return <TableCell align="left">{col.label}</TableCell>
+              })}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {this.state.rows.map(row => {
+              return <TableRow key={row.name}>
+                {this.columns.map(col => {
+                  return <TableCell align="left">{col.render(row, col)}</TableCell>
+                })}
+              </TableRow>
+            })}
+          </TableBody>
+        </Table>
       </div>
-    );
+    )
   }
 
   render() {
     if (this.state.error) {
-      return this.renderError()
+      return this.renderError(this.state.error, this.state.procedure.name)
     }
     if (this.state.status === 'executing') {
-      return this.renderExecuting()
+      return this.renderExecuting('Describing Table', this.cancel)
     }
     else {
       return this.renderProcedure()
