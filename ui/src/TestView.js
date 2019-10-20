@@ -83,7 +83,6 @@ export class TestView extends BaseView {
       //columns.push({label: label, prop: prop, render: this.renderCell, renderHeader: this.renderHeader})
       columns.push({name: prop, title: label})
     }
-    console.log(columns)
     return columns
   }
 
@@ -110,7 +109,7 @@ export class TestView extends BaseView {
 
   renderTable() {
     const Root = props => <Grid.Root {...props} style={{ height: '100%' }} />
-    const chipStyle = { 'margin-right': '10px' }
+    const chipStyle = { 'marginRight': '10px' }
 
     let generatedColumns = this.generateColumns(25)
     let generatedRows = this.generateRows(generatedColumns, 250)
@@ -160,6 +159,6 @@ export class TestView extends BaseView {
   }
 
   render() {
-    return this.subRenderError()
+    return this.renderTable()
   }
 }
