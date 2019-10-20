@@ -1,10 +1,10 @@
 import React from 'react';
-import { Card, CardContent, Chip, Paper, CardHeader, Typography } from '@material-ui/core'
+import { CircularProgress, Chip, Paper, Typography } from '@material-ui/core'
 import RefreshIcon from '@material-ui/icons/Refresh'
 import SaveIcon from '@material-ui/icons/Save'
 import SaveAllIcon from '@material-ui/icons/SaveAlt'
 import CachedIcon from '@material-ui/icons/Cached'
-import ErrorIcon from '@material-ui/icons/Error'
+import CancelIcon from '@material-ui/icons/Cancel'
 import {Grid as MUIGrid} from '@material-ui/core'
 import { FilteringState, IntegratedFiltering } from '@devexpress/dx-react-grid'
 import { Grid, VirtualTable, TableHeaderRow, TableColumnResizing, TableFilterRow } from '@devexpress/dx-react-grid-material-ui'
@@ -137,29 +137,29 @@ export class TestView extends BaseView {
     );
   }
 
-  renderError() {
+  subRenderError() {
     return (
       <div>
-        <Card elevation={4} style={{border: '1px solid red', 'margin': '10px'}}>
-          <CardHeader title="Error" avatar={<ErrorIcon color="error"/>} />
-          <CardContent>
-            <Typography variant="h6" color="default" component="p">
-              {this.state.result.error}
-            </Typography>
-          </CardContent>
-        </Card>
-        <Typography variant="body1" component="pre" style={{margin: '10px'}}>
-          {this.state.statement.sql}
-        </Typography>
+        {this.renderError(this.state.result.error, this.state.statement.sql)}
 
         <Chip label={4} title="Hello" size="small" style={{background: "lavender"}}>
         </Chip>
+
+        {this.renderExecuting(this.state.statement.sql, ()=>{console.log('cancel')})}
+
+        <Typography variant="body1" component="pre" style={{margin: '10px'}}>
+          {this.state.statement.sql}
+        </Typography>
+        <div>
+        <CircularProgress/>
+        <Chip size="small" onClick={this.cancel} label="Cancel" icon={<CancelIcon/>}/>
+        <pre>{this.state.statement ? this.state.statement.sql : ""}</pre>
+        </div>
       </div>
     )
   }
 
   render() {
-    return this.renderError()
+    return this.subRenderError()
   }
 }
-

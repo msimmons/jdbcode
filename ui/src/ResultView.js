@@ -1,13 +1,11 @@
 import React from 'react';
 import { BaseView } from './BaseView'
-import {Card, CardHeader, CardContent, Typography, Chip, Paper, CircularProgress} from '@material-ui/core'
+import {Chip, Paper} from '@material-ui/core'
 import {Grid as MUIGrid} from '@material-ui/core'
 import RefreshIcon from '@material-ui/icons/Refresh'
 import SaveIcon from '@material-ui/icons/Save'
 import SaveAllIcon from '@material-ui/icons/SaveAlt'
 import CachedIcon from '@material-ui/icons/Cached'
-import CancelIcon from '@material-ui/icons/Cancel'
-import ErrorIcon from '@material-ui/icons/Error'
 import RollbackIcon from '@material-ui/icons/Undo'
 import CommitIcon from '@material-ui/icons/Check'
 import { Grid, VirtualTable, TableHeaderRow, TableColumnResizing } from '@devexpress/dx-react-grid-material-ui'
@@ -146,34 +144,6 @@ export class ResultView extends BaseView {
     this.setState({statement: this.state.statement, result: newResult})
   }
 
-  renderError() {
-    return (
-      <div>
-        <Card elevation={4} style={{border: '1px solid red', 'margin': '10px'}}>
-          <CardHeader title="Error" avatar={<ErrorIcon color="error"/>} />
-          <CardContent>
-            <Typography variant="h6" color="default" component="p">
-              {this.state.result.error}
-            </Typography>
-          </CardContent>
-        </Card>
-        <Typography variant="body1" component="pre" style={{margin: '10px'}}>
-          {this.state.statement.sql}
-        </Typography>
-      </div>
-    )
-  }
-
-  renderExecuting() {
-    return (
-      <div>
-        <CircularProgress color="default"/>
-        <Chip size="small" onClick={this.cancel} label="Cancel" icon={<CancelIcon/>}/>
-        <pre>{this.state.statement ? this.state.statement.sql : ""}</pre>
-      </div>
-    )
-  }
-
   renderQuery() {
     const Root = props => <Grid.Root {...props} style={{ height: '100%' }} />
     const chipStyle = { 'margin-right': '10px' }
@@ -221,13 +191,13 @@ export class ResultView extends BaseView {
 
   render() {
     if (!this.state.result) {
-      return this.renderExecuting()
+      return this.renderExecuting(this.state.statement.sql, this.cancel)
     }
     if (this.state.result.error) {
-      return this.renderError()
+      return this.renderError(this.state.result.error, this.state.statement.sql)
     }
     if (this.state.result.status === 'executing') {
-      return this.renderExecuting()
+      return this.renderExecuting(this.state.statement.sql, this.cancel)
     }
     if (this.state.result.type === 'query') {
       return this.renderQuery()
@@ -235,7 +205,7 @@ export class ResultView extends BaseView {
     if (this.state.result.type === 'crud') {
       return this.renderCrud()
     }
-    return this.renderExecuting()
+    return this.renderExecuting(this.state.statement.sql, this.cancel)
   }
 }
 

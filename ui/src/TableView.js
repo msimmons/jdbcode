@@ -1,9 +1,7 @@
 import React from 'react';
 import { BaseView } from './BaseView'
-import {CircularProgress, Chip, Card, CardHeader, CardContent, Typography, TableHead, TableRow, TableBody, TableCell, Table} from '@material-ui/core'
-import CancelIcon from '@material-ui/icons/Cancel'
+import {Chip, TableHead, TableRow, TableBody, TableCell, Table} from '@material-ui/core'
 import StarIcon from '@material-ui/icons/StarBorder'
-import ErrorIcon from '@material-ui/icons/Error'
 
 const initialState = {
   status: 'executing',
@@ -95,31 +93,6 @@ export class TableView extends BaseView {
     console.log('Canceling')
   }
 
-  renderError() {
-    return (
-      <div>
-        <Card elevation={4} style={{border: '1px solid red', 'margin': '10px'}}>
-          <CardHeader title="Error describing" subheader={this.state.table.name} avatar={<ErrorIcon color="error"/>}/>
-          <CardContent>
-            <Typography variant="h6" color="default" component="p">
-              {this.state.error}
-            </Typography>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  renderExecuting() {
-    return (
-      <div>
-        <CircularProgress color="default"/>
-        <Chip size="small" clickable onClick={this.cancel} label="Cancel" icon={<CancelIcon/>}/>
-        <pre>Describing Table</pre>
-      </div>
-    )
-  }
-
   renderTable() {
     return (
       <div>
@@ -147,10 +120,10 @@ export class TableView extends BaseView {
 
   render() {
     if (this.state.error) {
-      return this.renderError()
+      return this.renderError(this.state.error, this.state.table.name)
     }
     if (this.state.status === 'executing') {
-      return this.renderExecuting()
+      return this.renderExecuting('Describing table', this.cancel)
     }
     else {
       return this.renderTable()
