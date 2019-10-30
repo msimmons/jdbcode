@@ -3,6 +3,7 @@ package net.contrapt.jdbcode.service
 import net.contrapt.jdbcode.model.ConnectionData
 import net.contrapt.jdbcode.model.DriverData
 import org.junit.Test
+import java.lang.Exception
 
 class ConnectionServiceTest {
 
@@ -21,5 +22,14 @@ class ConnectionServiceTest {
                 service.describe(connection, it)
             }
         }
+    }
+
+    @Test(expected = Exception::class)
+    fun testH2_validationQuery() {
+        // Testing that the validationQuery gets set by making it throw an exception
+        val service = ConnectionService()
+        val connection = ConnectionData("h2", "h2", "jdbc:h2:mem:test", "sa", "", "select 1 from poo")
+        val driverData = DriverData("h2", "org.h2.Driver", "")
+        service.connect(connection, driverData)
     }
 }

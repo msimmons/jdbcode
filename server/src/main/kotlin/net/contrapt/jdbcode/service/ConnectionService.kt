@@ -26,6 +26,7 @@ open class ConnectionService {
             maxLifetime = 0
             maximumPoolSize = connection.maxPoolSize
             minimumIdle = 1
+            connectionTestQuery = if (!connection.validationQuery.isNullOrEmpty()) connection.validationQuery else null
             addDataSourceProperty("applicationName", "jdbcode")
         }
         configs.put(connection.name, connection)
