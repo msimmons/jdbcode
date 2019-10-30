@@ -119,7 +119,8 @@
                 "type": "string"
               },
               "validationQuery": {
-                "type": "string"
+                "type": "string",
+                "description": "A query to validate the connection.  Optional since most drivers support JDBC4 isValid() -- if your driver does not, supply a query"
               },
               "fetchLimit": {
                 "type": "integer",
