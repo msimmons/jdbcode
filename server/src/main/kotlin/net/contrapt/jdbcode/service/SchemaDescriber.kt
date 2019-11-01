@@ -74,12 +74,16 @@ class SchemaDescriber {
                 val returnsValue: String = returnTypes[procedures.getInt("PROCEDURE_TYPE")]
                 schemaData.addObject(ProcedureData(ObjectOwner(schemaName, catalogName), name, ObjectType.procedure, returnsValue))
             }
+            schemaData.resolved = true
+            return schemaData
+        }
+        catch(e: Exception) {
+            schemaData.error = e.message
+            return schemaData
         }
         finally {
             connection.close()
         }
-        schemaData.resolved = true
-        return schemaData
     }
 
     fun describeObject(dataSource: DataSource, objectData: ObjectData) : ObjectData {
