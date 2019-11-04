@@ -78,6 +78,7 @@ class SchemaDescriber {
             return schemaData
         }
         catch(e: Exception) {
+            schemaData.resolved = true
             schemaData.error = e.message
             return schemaData
         }
