@@ -30,7 +30,7 @@ export class SchemaNode implements TreeNode {
     getTreeItem() : TreeItem {
         let item = new TreeItem(`${this.data.name} (${this.data.type})`, TreeItemCollapsibleState.Collapsed)
         item.contextValue = this.data.type
-        //item.iconPath =
+        item.tooltip = this.data.error
         return item
     }
 }
