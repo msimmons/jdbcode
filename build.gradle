@@ -28,10 +28,13 @@ configure([project(':server'), project(':grammar')]) {
 
     repositories {
         mavenCentral()
+        maven { setUrl("https://dl.bintray.com/hotkeytlt/maven") }
     }
 
     dependencies {
         compileOnly "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+        compile 'com.github.h0tk3y.betterParse:better-parse-jvm:0.4.0-alpha-3'
 
         testCompile "junit:junit:4.12"
         testCompile "org.mockito:mockito-core:3.1.0"
