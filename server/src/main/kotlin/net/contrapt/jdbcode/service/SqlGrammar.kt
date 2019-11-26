@@ -6,6 +6,19 @@ import com.github.h0tk3y.betterParse.grammar.parseToEnd
 import com.github.h0tk3y.betterParse.grammar.parser
 import com.github.h0tk3y.betterParse.parser.Parser
 
+/**
+ * 
+ file {
+   scope(start, end) {
+     symbol(start, end, type, fqn)
+     .
+     .
+     scope(start, end) {
+      symbol(start, end, ...)
+     }
+   }
+ }
+ */
 object SqlGrammar : Grammar<String>() {
 
     private fun keyword(token: String) = "${token}\\b".toRegex(RegexOption.IGNORE_CASE)
@@ -61,9 +74,10 @@ object SqlGrammar : Grammar<String>() {
 
     val simpleExpression : Parser<String> by (fqId or literal)
     val functionExpression : Parser<String> by (fqId * LPAREN * separated(parser(::valueExpression), COMMA, true) * RPAREN).map { it.t1 }
-    val complexExpression : Parser<String> by (separated(fqId, WS, false)).map { "" }
+    val blockKeyword : Parser<String> by (ORDER or BY or COMMA).map { it.text }
+    val blockExpression : Parser<String> by (LPAREN * zeroOrMore(parser(::valueExpression) or blockKeyword) * RPAREN).map { "BLOCK[${it.t2.size}]" }
 
-    val valueExpression : Parser<String> by (functionExpression or simpleExpression).map { it }
+    val valueExpression : Parser<String> by (blockExpression or functionExpression or simpleExpression).map { it }
 
     //val selectExpression : Parser<String> by ()
 
@@ -72,7 +86,7 @@ object SqlGrammar : Grammar<String>() {
 
     val statement : Parser<String> by (SELECT * zeroOrMore(fqId) * FROM * zeroOrMore(ID)).map { it.t2.joinToString { it } }
 
-    val idOrLiteral : Parser<String> by oneOrMore(functionExpression or simpleExpression).map { it.joinToString { it } }
+    val idOrLiteral : Parser<String> by oneOrMore(valueExpression).map { it.joinToString { it } }
 
     override val rootParser: Parser<String> by idOrLiteral
 
@@ -83,7 +97,7 @@ object SqlGrammar : Grammar<String>() {
                 "case id then 3 else 15 end",
                 "id over (partition by id order by id)",
                 "'This is a string''s literal' anid fe.id \"quoted id name\".id 'another literal' 9.0 9.99 .0109 1.01E-10 -1 -34E10 null '' concat(1,2,3,id.foo)",
-                "concat(1,32,1) substr(concat(12,232))"
+                "concat(1,32,1) substr(concat(12,232)) over (partition by foo.bar, max(1,2) order by 1, 2) case when 3 then 4 else 5 end"
         )
         println(parseToEnd(sql[4]))
     }
