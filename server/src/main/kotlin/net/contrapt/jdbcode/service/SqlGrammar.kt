@@ -63,6 +63,7 @@ object SqlGrammar : Grammar<String>() {
     val NULL by token(keyword("null"))
     val TRUE by token(keyword("true"))
     val FALSE by token(keyword("false"))
+    val AS by token(keyword("as"))
 
     // Identifiers
     val ID by token("[A-Za-z]\\w*")
@@ -96,10 +97,14 @@ object SqlGrammar : Grammar<String>() {
     val blockExpression : Parser<String> by (LPAREN * zeroOrMore(parser(::valueExpression) or blockKeyword) * RPAREN).map { "BLOCK[${it.t2.size}]" }
 
     val valueExpression : Parser<String> by (blockExpression or functionExpression or simpleExpression).map { it }
+    val columnAlias by optional(AS) * fqId // The scope exports column aliases
+    val selectExpression by valueExpression * optional(columnAlias)
 
-    //val selectExpression : Parser<String> by ()
+    val subquery : Parser<String> by (LPAREN * parser(::select) * RPAREN).map { it.t2 }
+    val tableAlias : Parser<String> by (optional(AS) * fqId).map { it.t2 }
+    val tableExpression : Parser<String> by ((fqId or subquery) * optional(tableAlias)).map { it.t1 }
 
-    val select : Parser<String> by (SELECT * zeroOrMore(valueExpression) * FROM * zeroOrMore(fqId)).map { it.t2.joinToString { it } }
+    val select : Parser<String> by (SELECT * separated(selectExpression, COMMA, true) * FROM * separated(tableExpression, COMMA, true)).map { it.t1.text }
     val insert : Parser<String> by (INSERT * INTO * ID * VALUES * zeroOrMore(ID)).map { "" }
 
     val statement : Parser<String> by (SELECT * zeroOrMore(fqId) * FROM * zeroOrMore(fqId)).map { it.t2.joinToString { it } }
@@ -111,7 +116,7 @@ object SqlGrammar : Grammar<String>() {
     @JvmStatic
     fun main(args: Array<String>) {
         val sql = listOf(
-                "SelEct \"a\".\"blah\", boo from bar",
+                "SelEct \"a\".\"blah\" as biteme, boo as \"Fuck you\" from bar as b, baa c, (select fudge from store) a",
                 "case id then 3 else 15 end",
                 "id over (partition by id order by id)",
                 "'This is a string''s literal' anid fe.id \"quoted id name\".id 'another literal' 9.0 9.99 .0109 1.01E-10 -1 -34E10 null '' concat(1,2,3,id.foo)",
