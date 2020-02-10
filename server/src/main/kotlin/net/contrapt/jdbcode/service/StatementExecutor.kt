@@ -29,8 +29,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
     private var type = StatementType.query
 
     private var isLimited = true
-    private var autocommit = config.autoCommit
-
+    private var autocommit = if (sqlStatement.suppressTxn) true else config.autoCommit
     private var fetchLimit = config.fetchLimit
 
     init {
@@ -62,7 +61,9 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
      */
     fun fetch() : SqlResult {
         if (results == null) {
-            return SqlResult(sqlStatement.id, status, type, updateCount, false, executionCount, executionTime, 0)
+            val inTxn = !connection.autoCommit
+            if (!inTxn) status = StatementStatus.committed
+            return SqlResult(sqlStatement.id, status, type, updateCount, false, executionCount, executionTime, 0, inTxn = inTxn)
         }
         // Get the column names
         val columnCount = results?.metaData?.columnCount ?: 0
@@ -87,8 +88,12 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
             }
         }
         // Commit for selects with no more rows (or 0 row dml)
-        if (updateCount <= 0 && !moreRows) connection.commit()
-        return SqlResult(sqlStatement.id, status, type, updateCount, moreRows, executionCount, executionTime, fetchTime, columns, rows)
+        val inTxn = if (updateCount <= 0 && !moreRows && !connection.autoCommit) {
+            connection.commit()
+            status = StatementStatus.committed
+            false
+        } else true
+        return SqlResult(sqlStatement.id, status, type, updateCount, moreRows, executionCount, executionTime, fetchTime, columns, rows, inTxn = inTxn)
     }
 
     /**
@@ -112,10 +117,10 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
      * Commit the current connection
      */
     fun commit() : SqlResult {
-        if ( !connection.isClosed) {
+        if (!connection.isClosed) {
             updateCount = -1
             status = StatementStatus.committed
-            connection.commit()
+            if (!connection.autoCommit) connection.commit()
         }
         return SqlResult(sqlStatement.id, status, type, updateCount, false, executionCount, executionTime, 0, columns, rows)
     }
@@ -127,7 +132,7 @@ class StatementExecutor(val config: ConnectionData, val connection: Connection, 
         if ( !connection.isClosed) {
             updateCount=-1
             status = StatementStatus.rolledback
-            connection.rollback()
+            if (!connection.autoCommit) connection.rollback()
         }
         return SqlResult(sqlStatement.id, status, type, updateCount, false, executionCount, executionTime, 0, columns, rows)
     }

@@ -8,7 +8,7 @@
     "url": "https://github.com/msimmons/jdbcode"
   },
   "engines": {
-    "vscode": "^1.28.0"
+    "vscode": "^1.42.0"
   },
   "categories": [
     "Other"
@@ -46,6 +46,10 @@
       {
         "command": "jdbcode.execute",
         "title": "SQL Execute"
+      },
+      {
+        "command": "jdbcode.execute-autocommit",
+        "title": "SQL Execute (No Transaction)"
       },
       {
         "command": "jdbcode.disconnect",
@@ -160,15 +164,15 @@
     "vscode:prepublish": "./gradlew deploy; npm run compile; cd ui && npm run deploy",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "postinstall": "node ./node_modules/vscode/bin/install",
-    "test": "npm run compile && node ./node_modules/vscode/bin/test"
+    "test": "npm run compile && node ./node_modules/vscode/bin/test",
+    "deploy": "./gradlew deploy; npm run compile; cd ui && npm run deploy"
   },
   "devDependencies": {
     "@types/mocha": "^2.2.48",
-    "@types/node": "^8.10.58",
-    "mocha": "^3.5.0",
-    "typescript": "^2.9.2",
-    "vscode": "^1.1.36"
+    "@types/node": "^13.7.0",
+    "@types/vscode": "^1.42.0",
+    "mocha": "^7.0.1",
+    "typescript": "^3.7.5"
   },
   "dependencies": {
     "node-uuid": "^1.4.8"

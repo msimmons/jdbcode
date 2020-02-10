@@ -10,6 +10,9 @@ import RollbackIcon from '@material-ui/icons/Undo'
 import CommitIcon from '@material-ui/icons/Check'
 import { Grid, VirtualTable, TableHeaderRow, TableColumnResizing } from '@devexpress/dx-react-grid-material-ui'
 
+const ID_NAME = 'id'
+const ID_REPLACED = '_id'
+
 const initialState = {
   statement: {
     id: undefined,
@@ -59,7 +62,7 @@ export class ResultView extends BaseView {
   }
 
   inTransaction = () => {
-    return this.state.result.status === 'executed' && this.state.result.type === 'crud'
+    return this.state.result.inTxn
   }
 
   noRows = () => {
@@ -86,7 +89,8 @@ export class ResultView extends BaseView {
       this.colDefs = event.data.result.columns.map((column, ndx) => {
         totalLen += column.length
         //return {label: column, prop: column, columnKey: ndx, render: this.renderCell, renderHeader: this.renderHeader }
-        return {name: column, title: column}
+        let name = (column === ID_NAME) ? ID_REPLACED : column
+        return {name: name, title: column}
       })
       this.colDefs.forEach((column) => {
         let relativeWidth = Math.floor((((column.title.length+5)*this.colDefs.length)/totalLen)*100)
@@ -98,8 +102,9 @@ export class ResultView extends BaseView {
     let rows = event.data.result.rows.map((row) => {
       let rowObject = {}
       this.colDefs.forEach((column, ndx) => {
-        rowObject[column.name] = row[ndx]
-        rowObject['id'] = ndx
+        let name = (column.name === ID_NAME) ? ID_REPLACED : column.name
+        rowObject[name] = row[ndx]
+        rowObject[ID_NAME] = ndx
       })
       return rowObject
     })

@@ -34,7 +34,8 @@ export class ResultSetWebview {
             fetchTime: 0,
             moreRows: false,
             updateCount: -1,
-            error: undefined
+            error: undefined,
+            inTxn: false
         }
     }
 

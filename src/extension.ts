@@ -76,6 +76,14 @@ export function activate(context: vscode.ExtensionContext) {
     }))
 
     /**
+     * Execute the currently selected SQL statement on the current connection without a transaction (autocommit=true).  If no current
+     * connection is chosen, allow user to choose one.
+     */
+    context.subscriptions.push(vscode.commands.registerCommand("jdbcode.execute-autocommit", () => {
+        dbController.executeSql(true)
+    }))
+
+    /**
      * Disconnect from current connection, closing all statements etc
      */
     context.subscriptions.push(vscode.commands.registerCommand("jdbcode.disconnect", () => {

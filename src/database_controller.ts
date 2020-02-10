@@ -127,8 +127,10 @@ export class DatabaseController {
 
     /**
      * Execute the currently selected SQL and open web view for results
+     * suppressTxn defaults to false which will honor the global 'autocommit' setting.  Setting it to true
+     * will set autocommit to true regardless of global setting
      */
-    async executeSql() {
+    async executeSql(suppressTxn: boolean = false) {
         let editor = vscode.window.activeTextEditor
         if (!editor) return
         let sql = editor.document.getText(editor.selection)
@@ -138,14 +140,16 @@ export class DatabaseController {
             if (!sql) return
         }
         if (!this.service.getConnection()) {
-            this.chooseAndConnect("jdbcode.execute")
+            let command = suppressTxn ? "jdbcode.execute-autocommit" : "jdbcode.execute"
+            this.chooseAndConnect(command)
             return
         }
         let queryId: string = makeUUID()
         let sqlStatement: SqlStatement = {
             id: queryId,
             connection: this.service.getConnection().name,
-            sql: this.trimSql(sql)
+            sql: this.trimSql(sql),
+            suppressTxn: suppressTxn
         }
         /**
          * Open the query result UI and execute the query updating the UI with the results
