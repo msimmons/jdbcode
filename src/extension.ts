@@ -7,28 +7,12 @@ import { DatabaseController } from './database_controller';
 import { DatabaseService } from './database_service';
 
 let dbController: DatabaseController
-let jvmcode: any
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 
-    // Get the exported API from jvmcode extension
-    jvmcode = vscode.extensions.getExtension('contrapt.jvmcode').exports
-
-    installVerticle()
-
-    function installVerticle() {
-        let jarFile = context.asAbsolutePath('out/jdbcode.jar')
-        let config = vscode.workspace.getConfiguration("jdbcode")
-        let drivers = config.get('drivers') as Array<object>
-        let jarFiles = drivers.map((it) => { return it['jarFile'] }).concat(jarFile)
-        jvmcode.install(jarFiles, 'net.contrapt.jdbcode.JDBCVerticle').then(() => {
-            let dbService = new DatabaseService(context)
-            dbController = new DatabaseController(context, dbService)
-            dbController.start()
-        })
-    }
+    let dbService = new DatabaseService(context)
+    dbController = new DatabaseController(context, dbService)
+    dbController.start()
 
     /**
      * Add a new JDBC driver definition
@@ -36,7 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('jdbcode.addDriver', () => {
         let config = vscode.workspace.getConfiguration("jdbcode")
         let drivers = config.get('drivers') as Array<object>
-        vscode.window.showOpenDialog({filters: {'Driver Jar': ['jar']}, canSelectMany: false}).then((jarFile) => {
+        vscode.window.showOpenDialog({filters: {'Driver JS': ['js']}, canSelectMany: false}).then((jarFile) => {
             if (!jarFile || jarFile.length == 0) return
             vscode.window.showInputBox({ placeHolder: 'A name for the driver' }).then((name) => {
                 if (!name) return

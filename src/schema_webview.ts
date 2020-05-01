@@ -114,7 +114,7 @@ export class SchemaWebview {
     }
 
     private getViewType(objectNode: ObjectNode) : string {
-        switch(objectNode.data.type) {
+        switch(objectNode.objectType) {
             case "function":
             case "procedure":
                 return 'PROCEDURE_VIEW'

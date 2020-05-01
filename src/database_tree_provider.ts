@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { TreeDataProvider, TreeItem, TreeItemCollapsibleState, EventEmitter } from 'vscode'
-import { SchemaNode, TypeNode, TreeNode } from './models'
+import { NamespaceNode, TypeNode, TreeNode } from './models'
 import { DatabaseService } from './database_service';
 
 export class DatabaseTreeProvider implements TreeDataProvider<object> {
@@ -31,9 +31,9 @@ export class DatabaseTreeProvider implements TreeDataProvider<object> {
         }
         switch ( element.type ) {
             case 'namespace':
-                return this.service.getSchemaObjects(element as SchemaNode)
+                return this.service.getSchemaObjects(element as NamespaceNode)
             case 'type':
-                return (element as TypeNode).objects
+                return (element as TypeNode).objectNodes
         }
     }
 

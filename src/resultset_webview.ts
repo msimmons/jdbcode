@@ -1,7 +1,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { SqlStatement, SqlResult } from 'server-models'
+import { SqlStatement, SqlResult } from './models'
 import { DatabaseService } from './database_service';
 import * as fs from 'fs'
 
@@ -19,30 +19,10 @@ export class ResultSetWebview {
         this.service = service
     }
 
-    /**
-     * Create default SqlResult until we get a real one
-     */
-    private createSqlResult(sqlStatement: SqlStatement) : SqlResult {
-        return {
-            id: sqlStatement.id,
-            status: "executing",
-            type: "query",
-            columns: [],
-            rows: [],
-            executionCount: 0,
-            executionTime: 0,
-            fetchTime: 0,
-            moreRows: false,
-            updateCount: -1,
-            error: undefined,
-            inTxn: false
-        }
-    }
-
     create(sqlStatement: SqlStatement, docNumber: number) {
         let docName = sqlStatement.connection + '-' + docNumber
         this.sqlStatement = sqlStatement
-        this.sqlResult = this.createSqlResult(sqlStatement)
+        this.sqlResult = new SqlResult(sqlStatement.id)
         this.panel = vscode.window.createWebviewPanel('jdbcode.resultset', docName, vscode.ViewColumn.One, {
             enableScripts: true,
             retainContextWhenHidden: true,
@@ -94,6 +74,8 @@ export class ResultSetWebview {
     }
 
     private sendMessage() {
+        console.log('sending message')
+        console.log(this.sqlResult)
         this.panel.webview.postMessage({statement: this.sqlStatement, result: this.sqlResult})
     }
 
@@ -104,8 +86,23 @@ export class ResultSetWebview {
         }
     }
 
+    /**
+     * Transform row values as necessary for display
+     * @param sqlResult 
+     */
+    private transformResult(sqlResult: SqlResult) : SqlResult {
+        sqlResult.rows = sqlResult.rows.map(row => {
+            let rowObject = {}
+            sqlResult.columns.forEach(col => {
+                rowObject[col] = this.getRowValue(row[col])
+            })
+            return rowObject
+        })
+        return sqlResult
+    }
+
     private update(sqlResult: SqlResult) {
-        this.sqlResult = sqlResult
+        this.sqlResult = this.transformResult(sqlResult)
         if (this.panel.visible) {
             this.sendMessage()
         } else {
@@ -200,21 +197,32 @@ export class ResultSetWebview {
         return this.sqlResult.columns.map((col) => { return '"' + col + '"' }).join(delimiter)
     }
 
-    private getRowStrings(rows: any[][], delimiter = ',') : string[] {
+    private getRowValue(value: any, quoted?: boolean) : any {
+        let wrapper = quoted ? '"' : ''
+        if (typeof value === 'number') return value
+        if (typeof value === 'boolean') return `${value}`
+        if (!value) return ''
+        if (value instanceof Date) return value.toISOString()
+        if (typeof value === 'object') {
+            let json = JSON.stringify(value)
+            json = quoted ? json.replace(/"/g, "'") : json
+            return `${wrapper}${json}${wrapper}`
+        }
+        return `${wrapper}${value}${wrapper}`
+    }
+
+    private getRowStrings(columns: string[], rows: any[], delimiter = ',') : string[] {
         return rows.map((row) => {
-            return row.map((value) => {
-                if (typeof value === 'number') return value
-                if (typeof value === 'boolean') return value
-                if (typeof value === 'undefined') return ''
-                if (typeof value === 'object') return ''
-                return '"' + value + '"'
+            return columns.map(col => {
+                let value = row[col]
+                return this.getRowValue(value, true)
             }).join(delimiter)
         })
     }
     
     private export() {
         let columns = this.getHeaderString()
-        let rows = this.getRowStrings(this.sqlResult.rows).join('\n')
+        let rows = this.getRowStrings(this.sqlResult.columns, this.sqlResult.rows).join('\n')
         let csv = columns + '\n' + rows
         vscode.workspace.openTextDocument({ language: 'csv', content: csv }).then((doc) => {
             vscode.window.showTextDocument(doc)
@@ -230,7 +238,7 @@ export class ResultSetWebview {
             let wout = fs.createWriteStream(file.path)
             wout.write(this.getHeaderString()+'\n')
             let rowCount = this.sqlResult.rows.length
-            let rowStrings = this.getRowStrings(this.sqlResult.rows).join('\n')
+            let rowStrings = this.getRowStrings(this.sqlResult.columns, this.sqlResult.rows).join('\n')
             wout.write(rowStrings)
             try {
                 let result = this.sqlResult
@@ -238,7 +246,7 @@ export class ResultSetWebview {
                     result = await this.service.fetch(result.id)
                     rowCount += result.rows.length
                     if (result.rows.length > 0) {
-                        rowStrings = this.getRowStrings(result.rows).join('\n')
+                        rowStrings = this.getRowStrings(this.sqlResult.columns, result.rows).join('\n')
                         wout.write('\n' + rowStrings)
                     }
                 }

@@ -7,8 +7,7 @@ import { DatabaseTreeProvider } from "./database_tree_provider";
 import { SchemaContentProvider } from "./schema_content_provider";
 import { CompletionProvider } from "./completion_provider";
 import { ResultSetWebview } from './resultset_webview';
-import { ObjectNode } from './models';
-import { ObjectOwner, ConnectionData, DriverData, SqlStatement } from 'server-models';
+import { ConnectionData, DriverData, ObjectNode, SqlStatement } from './models';
 import { SchemaWebview } from './schema_webview';
 
 let makeUUID = require('node-uuid').v4;
@@ -171,8 +170,9 @@ export class DatabaseController {
             types.forEach((tn) => {
                 tn.forEach(tt => {
                     items = items.concat(tt.objects.map((o) => {
-                        let ownerString = this.getOwnerString(o.data.owner)
-                        return { label: `${ownerString}.${o.data.name}`, description: o.data.type, item: o }
+                        //let ownerString = this.getOwnerString(o.namespace)
+                        let ownerString = o.namespace
+                        return { label: `${ownerString}.${o.name}`, description: tt.objectType, item: o }
                     }))
                 })
             })
@@ -188,7 +188,8 @@ export class DatabaseController {
      */
     async showDescribe(node: ObjectNode) {
         let panel = new SchemaWebview(this.context, this.service)
-        let docName = this.getOwnerString(node.data.owner) + '.' + node.data.name + ' (' + node.data.type + ')'
+        //let docName = this.getOwnerString(node.data.owner) + '.' + node.data.name + ' (' + node.data.type + ')'
+        let docName = `${node.object.namespace}.${node.object.name} (${node.objectType})`
         panel.create(node, docName)
         this.schemaPanels.push(panel)
     }
@@ -214,10 +215,6 @@ export class DatabaseController {
                 vscode.window.showErrorMessage('Error closing connection: ' + err)
             }
         })
-    }
-
-    private getOwnerString(owner: ObjectOwner) {
-        return owner.catalog ? owner.catalog : owner.schema
     }
 
     private trimSql(sql: string) : string {

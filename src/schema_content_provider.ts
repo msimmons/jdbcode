@@ -81,7 +81,7 @@ export class SchemaContentProvider implements vscode.TextDocumentContentProvider
     }
 
     private getSchemaHtml(dbObject: ObjectNode) : string {
-        let view = dbObject ? `schema-${dbObject.data.type}-view.js` : ''
+        let view = dbObject ? `schema-${dbObject.objectType}-view.js` : ''
         let viewUri = this.getScriptUri(view)
         return `
         <html>

@@ -31,12 +31,11 @@ export class ProcedureView extends BaseView {
   }
 
   update = (event) => {
-    let procedure = event.data.object.resolved
-    console.log(procedure)
+    let procedure = event.data.object.object
     if (!procedure) {
       return
     }
-    let rows = procedure.params
+    let rows = procedure.parameters
     this.setState({ ...this.state, procedure: procedure, rows: rows, status: event.data.status, error: event.data.error})
   }
 

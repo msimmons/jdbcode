@@ -1,22 +1,13 @@
 version: 2
 
 references:
-  jvm_cache_keys: &jvm_cache_keys
-    - v1-jvm-deps-{{ checksum "build.gradle" }}-{{ checksum "server/build.gradle" }}-{{ checksum "grammar/build.gradle" }}-{{ checksum "gradle.properties" }}
-    - v1-jvm-deps-{{ checksum "build.gradle" }}-{{ checksum "server/build.gradle" }}-{{ checksum "grammar/build.gradle" }}-
-    - v1-jvm-deps-{{ checksum "build.gradle" }}-{{ checksum "server/build.gradle" }}-
-    - v1-jvm-deps-{{ checksum "build.gradle" }}-
-    - v1-jvm-deps-
-  nvm-cache-keys: &npm_cache_keys
-    - v1-nvm-deps-{{ checksum "package.json" }}-{{ checksum "ui/package.json" }}
-    - v1-nvm-deps-{{ checksum "package.json" }}-
-    - v1-nvm-deps-
-
-  jvm_cache_key: &jvm_cache_key
-    v1-jvm-deps-{{ checksum "build.gradle" }}-{{ checksum "server/build.gradle" }}-{{ checksum "grammar/build.gradle" }}-{{ checksum "gradle.properties" }}
+  npm-cache-keys: &npm_cache_keys
+    - v1-npm-deps-{{ checksum "package.json" }}-{{ checksum "ui/package.json" }}
+    - v1-npm-deps-{{ checksum "package.json" }}-
+    - v1-npm-deps-
 
   npm_cache_key: &npm_cache_key
-    v1-nvm-deps-{{ checksum "package.json" }}-{{ checksum "ui/package.json" }}
+    v1-npm-deps-{{ checksum "package.json" }}-{{ checksum "ui/package.json" }}
 
 jobs:
   build:
@@ -30,16 +21,12 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            *jvm_cache_keys
-      - restore_cache:
-          keys:
             *npm_cache_keys
-      - run: ./gradlew deploy
       - run: 
           shell: /bin/bash --login -eo pipefail 
           command: |
             source ~/.nvm/nvm.sh
-            nvm i 8
+            nvm i 10
             npm i vsce -g
             npm install
             cd ui && npm install
@@ -49,11 +36,6 @@ jobs:
             cp *.vsix dist
 
       - save_cache:
-          key: *jvm_cache_key
-          paths:
-            - ~/.m2
-            - ~/.gradle
-      - save_cache:
           key: *npm_cache_key
           paths:
             - node_modules
@@ -61,8 +43,6 @@ jobs:
             - ~/.nvm
       - store_artifacts:
           path: dist
-      - store_test_results:
-          path: server/build/test-results
 workflows:
   version: 2
   build_publish:

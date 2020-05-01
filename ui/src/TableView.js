@@ -81,7 +81,7 @@ export class TableView extends BaseView {
   }
 
   update = (event) => {
-    let table = event.data.object.resolved
+    let table = event.data.object.object
     if (!table) {
       return
     }

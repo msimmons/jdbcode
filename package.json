@@ -161,21 +161,27 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "./gradlew deploy; npm run compile; cd ui && npm run deploy",
+    "vscode:prepublish": "npm run compile; cd ui && npm run deploy",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node ./node_modules/vscode/bin/test",
-    "deploy": "./gradlew deploy; npm run compile; cd ui && npm run deploy"
+    "test": "mocha -r ts-node/register test/unit/**/*.test.ts",
+    "deploy": "npm run compile; cd ui && npm run deploy"
   },
   "devDependencies": {
+    "@types/chai": "^4.2.11",
     "@types/mocha": "^2.2.48",
     "@types/node": "^13.7.0",
+    "@types/parsimmon": "^1.10.1",
     "@types/vscode": "^1.42.0",
-    "mocha": "^7.0.1",
+    "chai": "^4.2.0",
+    "mocha": "^7.1.2",
+    "ts-node": "^8.9.1",
     "typescript": "^3.7.5"
   },
   "dependencies": {
-    "node-uuid": "^1.4.8"
+    "node-uuid": "^1.4.8",
+    "parsimmon": "^1.13.0",
+    "tsdbc": "https://github.com/msimmons/tsdbc/releases/download/1.0-beta/tsdbc-1.0.0.tgz"
   },
   "extensionDependencies": [
     "contrapt.jvmcode"
