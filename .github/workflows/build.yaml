@@ -1,0 +1,25 @@
+name: Build
+on: [push]
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build
+        run: |
+          nvm i 10
+          npm i vsce -g
+          npm install
+          cd ui && npm install
+          cd ..
+          vsce package
+          mkdir dist
+          cp *.vsix dist
+      - name: Upload Dist
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: dist/
+  
