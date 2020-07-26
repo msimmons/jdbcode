@@ -29,9 +29,24 @@ export const Grammar = P.createLanguage<{
     StatementContent: Node<'SQL',string>
     Statements: string[]
 
+    STRING_LITERAL: string
+    NUMERIC_LITERAL: string
     ID: string
     QID: string
+    WILDCARD: string
+    Keyword: string
+    SimpleId: Node<'SimpleId', string>
     Identifier: Node<'Id', string[]>
+    Literal: Node<'Literal', string>
+    FunctionParams: Node<'Value', any>[]
+    FunctionExpression: Node<'Function', any>
+    BlockExpression: Node<'Block', any>
+    ValueExpression: Node<'Value', any>
+    AsAlias: Node<'Alias', string>
+    Alias: Node<'Alias', string[]>
+    SelectItem: Node<'SelectItem', any>
+    SelectItems: Node<'SelectItem', any>[]
+    SelectStatement: Node<'Select', any>
 }>({
     _: () => P.optWhitespace,
     __: () => P.whitespace,
@@ -39,8 +54,28 @@ export const Grammar = P.createLanguage<{
     StatementContent: (r) => statementContents().node('SQL'),
     Statements: (r) => P.alt(r.Separator, r.StatementContent).trim(r._).atLeast(1),
 
+    STRING_LITERAL: () => P.regexp(/'([^']|'')*'/),
+    NUMERIC_LITERAL: () => P.regexp(/([-]?[0-9]+(\.[0-9]*)?(E[-+]?[0-9]+)?)|([-]?\.[0-9]+(E[-+]?[0-9]+)?)/),
     ID: () => P.regexp(/[A-Za-z]\w*/),
     QID: () => P.regexp(/[^\"]*/).wrap(P.string('"'), P.string('"')),
-    Identifier: (r) => P.sepBy1(P.alt(r.ID, r.QID), P.regexp(/\.+/)).trim(r._).node('Id')
+    WILDCARD: () => P.string('*'),
+
+    Keyword: (r) => P.regexp(/from|where|order/i),
+    SimpleId: (r) => P.alt(P.lookahead(r.Keyword), r.QID, r.ID).node('SimpleId'),
+    Identifier: (r) => P.sepBy1(P.alt(r.WILDCARD, r.ID, r.QID), P.regexp(/\.+/)).trim(r._).node('Id'),
+    Literal: (r) => P.alt(P.regexp(/true|false|null/i), r.NUMERIC_LITERAL, r.STRING_LITERAL).trim(r._).node('Literal'),
+
+    AsAlias: (r) => P.seq(P.regexp(/as/i), r.__, r.SimpleId).map(id => id[2].value).node('Alias'),
+    Alias: (r) => P.alt(r.AsAlias, r.SimpleId).node('Alias'),
+
+    FunctionParams: (r) => P.sepBy(r.ValueExpression, P.string(',')),
+    FunctionExpression: (r) => P.seq(r.Identifier, r.FunctionParams.wrap(P.string('('), P.string(')'))).trim(r._).node('Function'),
+    BlockExpression: (r) => r.ValueExpression.atLeast(1).wrap(P.string('('), P.string(')')).node('Block'),
+    ValueExpression: (r) => P.alt(r.BlockExpression, r.FunctionExpression, r.Literal, r.Identifier).trim(r._).node('Value'),
+
+    SelectItem: (r) => P.seq(r.ValueExpression, r.Alias.atMost(1)).trim(r._).node('SelectItem'),
+    SelectItems: (r) => P.sepBy1(r.SelectItem, P.string(',')),
+
+    SelectStatement: (r) => P.seq(P.regexp(/select/i), r.__, r.SelectItems, P.regexp(/from/i), r.__, r.SelectItem).node('Select')
 
 })

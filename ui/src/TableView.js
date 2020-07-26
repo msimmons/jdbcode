@@ -38,7 +38,7 @@ export class TableView extends BaseView {
 
   renderIndices = (row, column, index) => {
     return row.indices.map((ndx) =>
-      <span title={`${ndx.name} (${ndx.unique ? 'unique' : ''} ${ndx.direction})`}>
+      <span title={`${ndx.name} (${ndx.unique ? 'unique' : ''}${ndx.descending ? ' desc' : ''})`}>
         <Chip label={ndx.position} style={this.tagStyle(ndx)}/>
       </span>
     )

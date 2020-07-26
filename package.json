@@ -78,24 +78,22 @@
       "properties": {
         "jdbcode.drivers": {
           "type": "array",
-          "description": "List of JDBC Drivers",
+          "description": "List of TSDBC Drivers",
           "items": {
             "title": "Driver",
             "type": "object",
             "required": [
               "name",
-              "driverClass",
-              "jarFile"
+              "driverFile"
             ],
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "User name for the driver"
               },
-              "driverClass": {
-                "type": "string"
-              },
-              "jarFile": {
-                "type": "string"
+              "driverFile": {
+                "type": "string",
+                "description": "The full path to the driver.js file"
               }
             }
           }
@@ -106,21 +104,41 @@
           "items": {
             "title": "Connection",
             "type": "object",
+            "required": [
+              "name",
+              "driver",
+              "username",
+              "password",
+              "host"
+            ],
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "User name for the connection"
               },
               "driver": {
-                "type": "string"
+                "type": "string",
+                "description": "The name of the driver to use"
               },
               "username": {
-                "type": "string"
+                "type": "string",
+                "description": "Login user name"
               },
               "password": {
-                "type": "string"
+                "type": "string",
+                "description": "Login password"
               },
-              "url": {
-                "type": "string"
+              "host": {
+                "type": "string",
+                "description": "The database host name"
+              },
+              "port": {
+                "type": "string",
+                "description": "The database port"
+              },
+              "database": {
+                "type": "string",
+                "description": "The database name"
               },
               "validationQuery": {
                 "type": "string",

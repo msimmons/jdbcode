@@ -169,10 +169,9 @@ export class DatabaseController {
             let items = []
             types.forEach((tn) => {
                 tn.forEach(tt => {
-                    items = items.concat(tt.objects.map((o) => {
-                        //let ownerString = this.getOwnerString(o.namespace)
-                        let ownerString = o.namespace
-                        return { label: `${ownerString}.${o.name}`, description: tt.objectType, item: o }
+                    items = items.concat(tt.objectNodes.map((node) => {
+                        let ownerString = node.object.namespace
+                        return { label: `${ownerString}.${node.object.name}`, description: tt.objectType, item: node }
                     }))
                 })
             })
@@ -188,7 +187,6 @@ export class DatabaseController {
      */
     async showDescribe(node: ObjectNode) {
         let panel = new SchemaWebview(this.context, this.service)
-        //let docName = this.getOwnerString(node.data.owner) + '.' + node.data.name + ' (' + node.data.type + ')'
         let docName = `${node.object.namespace}.${node.object.name} (${node.objectType})`
         panel.create(node, docName)
         this.schemaPanels.push(panel)
@@ -199,7 +197,7 @@ export class DatabaseController {
      */
     async disconnect() {
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Disconnecting" }, async (progress) => {
-            progress.report({ message: `Disconnecting  ${this.service.getConnection().name}` })
+            if (this.service.getConnection()) {progress.report({ message: `Disconnecting  ${this.service.getConnection().name}` })}
             this.resultSetPanels.forEach(panel => { panel.close() })
             this.resultSetPanels = []
             this.schemaPanels.forEach(panel => { panel.close() })

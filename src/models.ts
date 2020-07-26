@@ -2,23 +2,24 @@ import { TreeItem, TreeItemCollapsibleState } from 'vscode'
 import { Namespace, TableData, ViewData, ProcedureData, SequenceData, SynonymData, OtherData, RowSet } from 'tsdbc'
 
 export interface DriverData {
-    driverClass: string
-    jarFile: string
     name: string
+    driverFile: string
 }
 
 export interface ConnectionData {
-    autoCommit: boolean
     driver: string
-    excludes: string[]
+    name: string
+    username: string
+    password: string
+    host: string
+    port?: number
+    database?: string
+    autoCommit: boolean
     fetchLimit: number
+    excludes: string[]
     includes: string[]
     maxPoolSize: number
-    name: string
-    password: string
-    url: string
-    username: string
-    validationQuery: string
+    validationQuery?: string
 }
 
 export interface SqlStatement {
@@ -96,7 +97,7 @@ export class NamespaceNode implements TreeNode {
 }
 
 type ObjectType = "table" | "index" | "view" | "procedure" | "function" | "sequence" | "synonym" | "other"
-type ObjectData = TableData | ViewData | ProcedureData | SequenceData | SynonymData | OtherData
+export type ObjectData = TableData | ViewData | ProcedureData | SequenceData | SynonymData | OtherData
 
 export class TypeNode implements TreeNode {
     objectType: ObjectType
@@ -107,7 +108,7 @@ export class TypeNode implements TreeNode {
         this.objects = objects
         this.objectType = objectType
         this.type = "type"
-        this.objectNodes = objects.map(o => new ObjectNode(o, objectType))
+        this.objectNodes = objects.map(o => new ObjectNode(o, objectType)).sort((o1,o2) => o1.object.name.localeCompare(o2.object.name))
     }
     getTreeItem() : TreeItem {
         let item = new TreeItem(this.objectType, TreeItemCollapsibleState.Collapsed)

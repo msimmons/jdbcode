@@ -34,10 +34,11 @@ export class DatabaseService {
      * Open a connection with given connection and driver config
      */
     public async connect(connection: ConnectionData, driver: DriverData) {
-        let dbDriver = await DriverManager.load(driver.jarFile)
-        let driverConfig = <DriverConfig>{host: 'localhost', username: connection.username, password: connection.password, database: undefined}
+        let dbDriver = await DriverManager.load(driver.driverFile)
+        let driverConfig = <DriverConfig>{host: connection.host, port: connection.port, username: connection.username, password: connection.password, database: connection.database}
         this.dataSource = dbDriver.load(driverConfig)
         let metaData = await this.dataSource.metaData()
+        console.log(metaData)
         //let reply = await this.jvmcode.send('jdbcode.connect', { connection: connection, driver: driver })
         //let data = reply.body as ConnectionResult
         this.currentConnection = connection
@@ -72,7 +73,7 @@ export class DatabaseService {
             if (ns.sequences.length) nsNode.typeNodes.push(new TypeNode("sequence", ns.sequences))
             if (ns.others.length) nsNode.typeNodes.push(new TypeNode("other", ns.others))
             return nsNode
-        }).filter(nsNode => nsNode.typeNodes.length > 0)
+        }).filter(nsNode => nsNode.typeNodes.length > 0).sort((ns1,ns2) => ns1.data.name.localeCompare(ns2.data.name))
         this.nsNodes.forEach(ns => {
             ns.typeNodes.forEach(tn => {
                 tn.objectNodes.forEach(on => {
@@ -208,8 +209,8 @@ export class DatabaseService {
      */
     public async close(id: string) {
         let data = this.getData(id)
-        data.cursor.close()
-        data.connection.close()
+        if (data.cursor) await data.cursor.close()
+        if (data.connection) await data.connection.close()
         //await this.jvmcode.send('jdbcode.close', {id: id})
     }
 
