@@ -14,8 +14,8 @@ interface StatementData {
 export class DatabaseService {
 
     private context: vscode.ExtensionContext
-    private jvmcode: any
     private nsNodes: NamespaceNode []
+    /* Map objects by name for convenience */
     private objectMap: Map<string, ObjectNode[]> = new Map()
     private currentConnection?: ConnectionData
     private dataSource: DataSource
@@ -23,9 +23,11 @@ export class DatabaseService {
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context
-        this.jvmcode = vscode.extensions.getExtension('contrapt.jvmcode').exports
     }
 
+    /**
+     * The current connection configuration, null if no current connection
+     */
     getConnection() : ConnectionData {
         return this.currentConnection
     }
@@ -35,12 +37,16 @@ export class DatabaseService {
      */
     public async connect(connection: ConnectionData, driver: DriverData) {
         let dbDriver = await DriverManager.load(driver.driverFile)
-        let driverConfig = <DriverConfig>{host: connection.host, port: connection.port, username: connection.username, password: connection.password, database: connection.database}
+        let driverConfig = <DriverConfig>{
+            host: connection.host, 
+            port: connection.port, 
+            username: connection.username, 
+            password: connection.password, 
+            database: connection.database
+            // TODO: vendorConfig
+        }
         this.dataSource = dbDriver.load(driverConfig)
         let metaData = await this.dataSource.metaData()
-        console.log(metaData)
-        //let reply = await this.jvmcode.send('jdbcode.connect', { connection: connection, driver: driver })
-        //let data = reply.body as ConnectionResult
         this.currentConnection = connection
         this.mapSchemaNodes(metaData)
     }
@@ -50,7 +56,6 @@ export class DatabaseService {
      */
     public async refresh() {
         let metaData = await this.dataSource.metaData()
-        //let reply = await this.jvmcode.send('jdbcode.refresh', {connection: this.currentConnection})
         this.mapSchemaNodes(metaData)
     }
 
@@ -62,18 +67,23 @@ export class DatabaseService {
         this.objectMap.clear()
         let excludes = this.currentConnection.excludes ? this.currentConnection.excludes : []
         let includes = this.currentConnection.includes ? this.currentConnection.includes : []
-        this.nsNodes = data.namespaces.filter(nsNode => !excludes.find(e => nsNode.name.startsWith(e)))
-        .filter(nsNode => !includes.length || includes.find(i => nsNode.name.startsWith(i)))
-        .map((ns) => { 
-            let nsNode = new NamespaceNode(ns)
-            if (ns.tables.length) nsNode.typeNodes.push(new TypeNode("table", ns.tables))
-            if (ns.views.length) nsNode.typeNodes.push(new TypeNode("view", ns.views))
-            if (ns.procedures.length) nsNode.typeNodes.push(new TypeNode("procedure", ns.procedures))
-            if (ns.synonyms.length) nsNode.typeNodes.push(new TypeNode("synonym", ns.synonyms))
-            if (ns.sequences.length) nsNode.typeNodes.push(new TypeNode("sequence", ns.sequences))
-            if (ns.others.length) nsNode.typeNodes.push(new TypeNode("other", ns.others))
-            return nsNode
-        }).filter(nsNode => nsNode.typeNodes.length > 0).sort((ns1,ns2) => ns1.data.name.localeCompare(ns2.data.name))
+        // Create the nodes, filtering by exludes and includes and sorting
+        this.nsNodes = data.namespaces
+            .filter(nsNode => !excludes.find(e => nsNode.name.startsWith(e)))
+            .filter(nsNode => !includes.length || includes.find(i => nsNode.name.startsWith(i)))
+            .map((ns) => { 
+                let nsNode = new NamespaceNode(ns)
+                if (ns.tables.length) nsNode.typeNodes.push(new TypeNode("table", ns.tables))
+                if (ns.views.length) nsNode.typeNodes.push(new TypeNode("view", ns.views))
+                if (ns.procedures.length) nsNode.typeNodes.push(new TypeNode("procedure", ns.procedures))
+                if (ns.synonyms.length) nsNode.typeNodes.push(new TypeNode("synonym", ns.synonyms))
+                if (ns.sequences.length) nsNode.typeNodes.push(new TypeNode("sequence", ns.sequences))
+                if (ns.others.length) nsNode.typeNodes.push(new TypeNode("other", ns.others))
+                return nsNode
+            })
+            .filter(nsNode => nsNode.typeNodes.length > 0)
+            .sort((ns1,ns2) => ns1.data.name.localeCompare(ns2.data.name))
+        // Populate map of name -> object[]
         this.nsNodes.forEach(ns => {
             ns.typeNodes.forEach(tn => {
                 tn.objectNodes.forEach(on => {
@@ -89,10 +99,10 @@ export class DatabaseService {
      */
     public async disconnect() {
         if (!this.currentConnection) return
-        //await this.jvmcode.send('jdbcode.disconnect', {connection: this.currentConnection})
         await this.dataSource.close()
         this.dataSource = undefined
         this.currentConnection = undefined
+        this.objectMap.clear()
         this.nsNodes = []
     }
 
@@ -111,10 +121,10 @@ export class DatabaseService {
 
     /**
      * Describe the given database object
+     * TODO Is this useless, seems like it
      */
     public async describe(node: ObjectNode) : Promise<ObjectNode> {
         return node
-        //let reply = await this.jvmcode.send('jdbcode.describe', {connection: this.currentConnection, dbObject: node.data})
     }
 
     /**
@@ -122,16 +132,21 @@ export class DatabaseService {
      */
     public async execute(sql: SqlStatement) : Promise<SqlResult> {
         let autocommit = sql.suppressTxn ? true : this.currentConnection.autoCommit
+        // Set the data first so we can find it
+        let data = <StatementData>{sql: sql, connection: undefined, cursor: undefined, result: new SqlResult(sql.id)}
         try {
+            this.statements.set(sql.id, data)
+            // Connect and set connection settings
             let connection = await this.dataSource.connect(autocommit)
             connection.fetchSize = this.currentConnection.fetchLimit
             if (!connection.autoCommit) await connection.begin()
-            let data = <StatementData>{sql: sql, connection: connection, cursor: undefined, result: new SqlResult(sql.id)}
-            this.statements.set(sql.id, data)
+            data.connection = connection
             return await this.doExecute(data)
         }
         catch (error) {
-            return <SqlResult>{id: sql.id, error: `Error getting connection: ${error}`}
+            console.log(JSON.stringify(error))
+            data.result.error = `Error getting connection: ${error}`
+            return data.result
         }
     }
     
@@ -146,10 +161,10 @@ export class DatabaseService {
             return data.result
         }
         catch(error) {
-            data.result.error = error
+            console.log(JSON.stringify(error))
+            data.result.error = error.message
             return data.result
         }
-        //let result= await this.jvmcode.send('jdbcode.execute', sql)
     }
 
     /**
@@ -158,11 +173,9 @@ export class DatabaseService {
     public async fetch(id: string) : Promise<SqlResult> {
         let data = this.statements.get(id)
         if (!data) throw new Error(`No statement found for ${id}`)
-        //let result= await this.jvmcode.send('jdbcode.fetch', {id: id})
         let set = await data.cursor.fetch()
         data.result.update(set, 0)
         return data.result
-        //return result.body as SqlResult
     }
 
     /**
@@ -178,10 +191,10 @@ export class DatabaseService {
      * Cancel the sql statement
      */
     public async cancel(id: string) : Promise<SqlResult> {
-        //let result = await this.jvmcode.send('jdbcode.cancel', {id: id})
         let data = this.getData(id)
-        data.cursor.close()
-        data.connection.close()
+        if (data.connection && !data.connection.autoCommit) await data.connection.rollback()
+        if (data.cursor) await data.cursor.close()
+        if (data.connection) await data.connection.close()
         data.result.status = "cancelled"
         return data.result
     }
@@ -190,18 +203,16 @@ export class DatabaseService {
      * Commit the sql statement
      */
     public async commit(id: string) : Promise<SqlResult> {
-        //let result = await this.jvmcode.send('jdbcode.commit', {id: id})
-        //return result.body as SqlResult
-        return undefined
+        let data = this.getData(id)
+        return data.result
     }
 
     /**
      * Rollback the sql statement
      */
     public async rollback(id: string) : Promise<SqlResult> {
-        //let result = await this.jvmcode.send('jdbcode.rollback', {id: id})
-        //return result.body as SqlResult
-        return undefined
+        let data = this.getData(id)
+        return data.result
     }
 
     /**
@@ -209,9 +220,10 @@ export class DatabaseService {
      */
     public async close(id: string) {
         let data = this.getData(id)
+        if (data.connection && !data.connection.autoCommit) await data.connection.rollback()
         if (data.cursor) await data.cursor.close()
         if (data.connection) await data.connection.close()
-        //await this.jvmcode.send('jdbcode.close', {id: id})
+        this.statements.delete(id)
     }
 
     /**
@@ -227,8 +239,6 @@ export class DatabaseService {
      * Parse the given SQL and returning item expcted at cursor
      */
     public async parse(sql: string, offset: number) : Promise<any> {
-        //let reply = await this.jvmcode.send('jdbcode.parse', {sql: sql, char: offset})
-        //return reply.body
         return undefined
     }
 
@@ -244,20 +254,6 @@ export class DatabaseService {
      */
     public async getSchemaObjects(schema: NamespaceNode) : Promise<TypeNode[]> {
         return schema.typeNodes
-/*
-        let reply = await this.jvmcode.send('jdbcode.objects', {connection: this.currentConnection, schema: schema.data})
-        let resolved = reply.body as SchemaData
-        schema.data.objectTypes = resolved.objectTypes
-        schema.typeNodes = resolved.objectTypes.map((type) => {
-            let typeNode = new TypeNode(type)
-            typeNode.objects = type.objects.map((o) => {
-                return new ObjectNode(o)
-            })
-            return typeNode
-        })
-        schema.resolved = true
-        return schema.typeNodes
-*/
     }
 
 }

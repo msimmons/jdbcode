@@ -91,7 +91,7 @@ export class ResultSetWebview {
      * @param sqlResult 
      */
     private transformResult(sqlResult: SqlResult) : SqlResult {
-        sqlResult.rows = sqlResult.rows.map(row => {
+        sqlResult.rows = (sqlResult.rows ? sqlResult.rows : []).map(row => {
             let rowObject = {}
             sqlResult.columns.forEach(col => {
                 rowObject[col] = this.getRowValue(row[col])
@@ -127,12 +127,11 @@ export class ResultSetWebview {
             this.update(result)
         }
         catch (error) {
-            vscode.window.showErrorMessage('Error executing SQL: ' + error.message)
+            vscode.window.showErrorMessage('Error fetching: ' + error.message)
         }
     }
 
     private async reexecute() {
-        // Clear the rows so we aren't sending them back to server
         this.sqlResult.rows = []
         this.sqlResult.columns = []
         try {

@@ -200,7 +200,9 @@ export class ResultView extends BaseView {
       return this.renderExecuting(this.state.statement.sql, this.cancel)
     }
     if (this.state.result.error) {
-      return this.renderError(this.state.result.error.message, this.state.statement.sql)
+      console.log(this.state.result)
+      console.log(this.state.result.error)
+      return this.renderError(this.state.result.error, this.state.statement.sql)
     }
     if (this.state.result.status === 'executing') {
       return this.renderExecuting(this.state.statement.sql, this.cancel)

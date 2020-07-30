@@ -204,7 +204,6 @@ export class DatabaseController {
             this.schemaPanels = []
             this.schemaTreeProvider.clear()
             this.statusBarItem.text = '$(database)'
-            // Tell server to disconnect (close current statements and connections)
             try {
                 await this.service.disconnect()
                 vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', false)
