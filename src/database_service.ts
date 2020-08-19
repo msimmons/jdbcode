@@ -138,7 +138,7 @@ export class DatabaseService {
             this.statements.set(sql.id, data)
             // Connect and set connection settings
             let connection = await this.dataSource.connect(autocommit)
-            connection.fetchSize = this.currentConnection.fetchLimit
+            connection.fetchSize = this.currentConnection.fetchLimit || 500
             if (!connection.autoCommit) await connection.begin()
             data.connection = connection
             return await this.doExecute(data)
@@ -157,7 +157,7 @@ export class DatabaseService {
             data.cursor = cursor
             let rowSet = await cursor.fetch()
             let elapsed = process.hrtime(start)
-            data.result.update(rowSet, elapsed[0])
+            data.result.update(rowSet, elapsed[0], data.connection.autoCommit)
             return data.result
         }
         catch(error) {
@@ -174,7 +174,7 @@ export class DatabaseService {
         let data = this.statements.get(id)
         if (!data) throw new Error(`No statement found for ${id}`)
         let set = await data.cursor.fetch()
-        data.result.update(set, 0)
+        data.result.update(set, 0, data.connection.autoCommit)
         return data.result
     }
 
@@ -182,9 +182,10 @@ export class DatabaseService {
      * Re-execute the sql statement
      */
     public async reexecute(id: string) : Promise<SqlResult> {
-        //let result = await this.jvmcode.send('jdbcode.reexecute', {id: id})
-        //return result.body as SqlResult
-        return undefined
+        let data = this.statements.get(id)
+        if (!data) throw new Error(`No statement found for ${id}`)
+        await data.cursor.close();
+        return this.doExecute(data)
     }
 
     /**
@@ -204,6 +205,10 @@ export class DatabaseService {
      */
     public async commit(id: string) : Promise<SqlResult> {
         let data = this.getData(id)
+        await data.connection.commit()
+        await data.cursor.close()
+        data.result.status = "committed"
+        data.result.inTxn = false
         return data.result
     }
 
@@ -212,6 +217,10 @@ export class DatabaseService {
      */
     public async rollback(id: string) : Promise<SqlResult> {
         let data = this.getData(id)
+        await data.connection.rollback()
+        await data.cursor.close()
+        data.result.status = "rolledback"
+        data.result.inTxn = false
         return data.result
     }
 

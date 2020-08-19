@@ -88,9 +88,8 @@ export class ResultView extends BaseView {
       let totalLen = 0
       this.colDefs = event.data.result.columns.map((column, ndx) => {
         totalLen += column.length
-        //return {label: column, prop: column, columnKey: ndx, render: this.renderCell, renderHeader: this.renderHeader }
         let name = (column === ID_NAME) ? ID_REPLACED : column
-        return {name: name, title: column}
+        return {name: name, title: column, rowName: column}
       })
       this.colDefs.forEach((column) => {
         let relativeWidth = Math.floor((((column.title.length+5)*this.colDefs.length)/totalLen)*100)
@@ -99,13 +98,12 @@ export class ResultView extends BaseView {
         widths.push({columnName: column.name, width: relativeWidth})
       })
     }
-    let rows = event.data.result.rows.map((row) => {
+    let rows = event.data.result.rows.map((row, ri) => {
       let rowObject = {}
-      this.colDefs.forEach((column,ndx) => {
-        let name = (column.name === ID_NAME) ? ID_REPLACED : column.name
-        let value = row[column.name]
-        rowObject[name] = value
-        rowObject[ID_NAME] = ndx
+      this.colDefs.forEach((column, ci) => {
+        let value = row[column.rowName]
+        rowObject[column.name] = value
+        rowObject[ID_NAME] = ri
       })
       return rowObject
     })

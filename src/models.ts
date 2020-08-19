@@ -48,15 +48,23 @@ export class SqlResult {
         this.id = id
     }
 
-    update(rowSet: RowSet, elapsed: number) {
+    update(rowSet: RowSet, elapsed: number, autoCommit: boolean) {
         this.columns = rowSet.columns
+        this.rows = rowSet.rows
         this.executionCount++
         this.executionTime += elapsed
         this.moreRows = rowSet.moreRows
         this.status = "executed"
-        this.type = "query"
-        this.updateCount = -1
-        this.rows = rowSet.rows
+        if (this.columns.length > 0) {
+            this.type = "query"
+            this.updateCount = -1
+            this.inTxn = false
+        }
+        else {
+            this.type = "crud"
+            this.updateCount = rowSet.rowCount
+            this.inTxn = !autoCommit
+        }
     }
 }
 
