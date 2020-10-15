@@ -11,6 +11,7 @@ jobs:
           node-version: '12'
       - name: Set Version
         run: npm --no-git-tag-version version prerelease --preid=$GITHUB_RUN_NUMBER
+        if: ${{ !endsWith(github.ref, '/develop') }}
       - name: Build
         run: |
           npm i vsce -g
