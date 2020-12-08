@@ -29,7 +29,7 @@ export class ResultSetWebview {
             enableFindWidget: true
         })
 
-        this.panel.onDidDispose(() => { this.disposed() }, null, this.context.subscriptions)
+        this.panel.onDidDispose(async () => { await this.disposed() }, null, this.context.subscriptions)
 
         this.panel.webview.onDidReceiveMessage(message => {
             switch (message.command) {
@@ -179,9 +179,9 @@ export class ResultSetWebview {
         }
     }
 
-    private disposed() {
+    private async disposed() {
         try {
-            this.service.close(this.sqlStatement.id)
+            await this.service.close(this.sqlStatement.id)
         }
         catch(error) {
             vscode.window.showErrorMessage('Error closing statement: ' + error.message)
