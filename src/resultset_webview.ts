@@ -173,7 +173,8 @@ export class ResultSetWebview {
         }
     }
 
-    public close() {
+    public async close() {
+        await this.disposed()
         if (this.panel) {
             this.panel.dispose()
         }
@@ -181,15 +182,12 @@ export class ResultSetWebview {
 
     private async disposed() {
         try {
-            await this.service.close(this.sqlStatement.id)
+            if (this.sqlStatement) await this.service.close(this.sqlStatement.id)
+            this.sqlStatement = undefined
         }
         catch(error) {
             vscode.window.showErrorMessage('Error closing statement: ' + error.message)
         }
-        this.panel = null
-        this.sqlStatement = null
-        this.context = null
-        this.service = null
     }
 
     private getHeaderString(delimiter = ',') : string {

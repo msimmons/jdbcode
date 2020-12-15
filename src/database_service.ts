@@ -99,6 +99,7 @@ export class DatabaseService {
      */
     public async disconnect() {
         if (!this.currentConnection) return
+        for (const id of this.statements.keys()) await this.close(id)
         await this.dataSource.close()
         this.dataSource = undefined
         this.currentConnection = undefined
@@ -228,11 +229,15 @@ export class DatabaseService {
      * Close the sql statement
      */
     public async close(id: string) {
-        let data = this.getData(id)
-        if (data.connection && !data.connection.autoCommit) await data.connection.rollback()
-        if (data.cursor) await data.cursor.close()
-        if (data.connection) await data.connection.close()
-        this.statements.delete(id)
+        try {
+            let data = this.getData(id)
+            //if (data.connection && !data.connection.autoCommit) await data.connection.rollback()
+            if (data.cursor) await data.cursor.close()
+            if (data.connection) await data.connection.close()
+            this.statements.delete(id)
+        } catch (error) {
+            console.error(`Error closing statement ${id}: ${error}`)
+        }
     }
 
     /**

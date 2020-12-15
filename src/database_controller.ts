@@ -22,8 +22,8 @@ export class DatabaseController {
     private schemaTreeProvider: DatabaseTreeProvider
     private schemaContentProvider: SchemaContentProvider
     private completionProvider: CompletionProvider
-    private resultSetPanels: ResultSetWebview[] = []
-    private schemaPanels: SchemaWebview[] = []
+    private resultSetViews: ResultSetWebview[] = []
+    private schemaViews: SchemaWebview[] = []
     private docCount = 0
 
     private service: DatabaseService
@@ -153,9 +153,9 @@ export class DatabaseController {
         /**
          * Open the query result UI and execute the query updating the UI with the results
          */
-        let panel = new ResultSetWebview(this.context, this.service)
-        panel.create(sqlStatement, ++this.docCount)
-        this.resultSetPanels.push(panel)
+        let webview = new ResultSetWebview(this.context, this.service)
+        webview.create(sqlStatement, ++this.docCount)
+        this.resultSetViews.push(webview)
     }
 
     /**
@@ -189,19 +189,19 @@ export class DatabaseController {
         let panel = new SchemaWebview(this.context, this.service)
         let docName = `${node.object.namespace}.${node.object.name} (${node.objectType})`
         panel.create(node, docName)
-        this.schemaPanels.push(panel)
+        this.schemaViews.push(panel)
     }
 
     /**
      * Disconnect from the current connection if any
      */
     async disconnect() {
-        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Disconnecting" }, async (progress) => {
+        await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Disconnecting" }, async (progress) => {
             if (this.service.getConnection()) {progress.report({ message: `Disconnecting  ${this.service.getConnection().name}` })}
-            this.resultSetPanels.forEach(panel => { panel.close() })
-            this.resultSetPanels = []
-            this.schemaPanels.forEach(panel => { panel.close() })
-            this.schemaPanels = []
+            for (const view of this.resultSetViews) await view.close()
+            this.resultSetViews = []
+            for (const view of this.schemaViews) view.close()
+            this.schemaViews = []
             this.schemaTreeProvider.clear()
             this.statusBarItem.text = '$(database)'
             try {
