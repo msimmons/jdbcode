@@ -194,8 +194,8 @@ export class DatabaseService {
      */
     public async cancel(id: string) : Promise<SqlResult> {
         let data = this.getData(id)
-        if (data.connection && !data.connection.autoCommit) await data.connection.rollback()
         if (data.cursor) await data.cursor.close()
+        if (data.connection && !data.connection.autoCommit) await data.connection.rollback()
         if (data.connection) await data.connection.close()
         data.result.status = "cancelled"
         return data.result
@@ -218,8 +218,8 @@ export class DatabaseService {
      */
     public async rollback(id: string) : Promise<SqlResult> {
         let data = this.getData(id)
-        await data.connection.rollback()
         await data.cursor.close()
+        await data.connection.rollback()
         data.result.status = "rolledback"
         data.result.inTxn = false
         return data.result
@@ -231,8 +231,8 @@ export class DatabaseService {
     public async close(id: string) {
         try {
             let data = this.getData(id)
-            //if (data.connection && !data.connection.autoCommit) await data.connection.rollback()
             if (data.cursor) await data.cursor.close()
+            if (data.connection && !data.connection.autoCommit) await data.connection.rollback()
             if (data.connection) await data.connection.close()
             this.statements.delete(id)
         } catch (error) {
