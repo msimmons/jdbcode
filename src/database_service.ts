@@ -13,6 +13,7 @@ interface StatementData {
 
 export class DatabaseService {
 
+    private outputChannel: vscode.OutputChannel
     private context: vscode.ExtensionContext
     private nsNodes: NamespaceNode []
     /* Map objects by name for convenience */
@@ -23,6 +24,7 @@ export class DatabaseService {
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context
+        this.outputChannel = vscode.window.createOutputChannel("JDBCode")
     }
 
     /**
@@ -100,7 +102,9 @@ export class DatabaseService {
     public async disconnect() {
         if (!this.currentConnection) return
         for (const id of this.statements.keys()) await this.close(id)
+        this.logCall("disconnect", "dataSource.close", true)
         await this.dataSource.close()
+        this.logCall("disconnect", "dataSource.close", false)
         this.dataSource = undefined
         this.currentConnection = undefined
         this.objectMap.clear()
@@ -138,7 +142,9 @@ export class DatabaseService {
         try {
             this.statements.set(sql.id, data)
             // Connect and set connection settings
+            this.logCall("execute", "dataSource.connect", true)
             let connection = await this.dataSource.connect(autocommit)
+            this.logCall("execute", "dataSource.connect", false)
             connection.fetchSize = this.currentConnection.fetchLimit || 500
             if (!connection.autoCommit) await connection.begin()
             data.connection = connection
@@ -194,9 +200,15 @@ export class DatabaseService {
      */
     public async cancel(id: string) : Promise<SqlResult> {
         let data = this.getData(id)
+        this.logCall("cancel", "cursor.close", true)
         if (data.cursor) await data.cursor.close()
+        this.logCall("cancel", "cursor.close", false)
+        this.logCall("cancel", "connection.rollback", true)
         if (data.connection && !data.connection.autoCommit) await data.connection.rollback()
+        this.logCall("cancel", "connection.rollback", false)
+        this.logCall("cancel", "connection.close", true)
         if (data.connection) await data.connection.close()
+        this.logCall("cancel", "connection.close", false)
         data.result.status = "cancelled"
         return data.result
     }
@@ -206,8 +218,12 @@ export class DatabaseService {
      */
     public async commit(id: string) : Promise<SqlResult> {
         let data = this.getData(id)
-        await data.connection.commit()
+        this.logCall("commit", "cursor.close", true)
         await data.cursor.close()
+        this.logCall("commit", "cursor.close", false)
+        this.logCall("commit", "connection.commit", true)
+        await data.connection.commit()
+        this.logCall("commit", "connection.commit", false)
         data.result.status = "committed"
         data.result.inTxn = false
         return data.result
@@ -218,8 +234,12 @@ export class DatabaseService {
      */
     public async rollback(id: string) : Promise<SqlResult> {
         let data = this.getData(id)
+        this.logCall("rollback", "cursor.close", true)
         await data.cursor.close()
+        this.logCall("rollback", "cursor.close", false)
+        this.logCall("rollback", "connection.rollback", true)
         await data.connection.rollback()
+        this.logCall("rollback", "connection.rollback", false)
         data.result.status = "rolledback"
         data.result.inTxn = false
         return data.result
@@ -231,9 +251,15 @@ export class DatabaseService {
     public async close(id: string) {
         try {
             let data = this.getData(id)
+            this.logCall("close", "cursor.close", true)
             if (data.cursor) await data.cursor.close()
+            this.logCall("close", "cursor.close", false)
+            this.logCall("close", "connection.rollback", true)
             if (data.connection && !data.connection.autoCommit) await data.connection.rollback()
+            this.logCall("close", "connection.rollback", false)
+            this.logCall("close", "connection.close", true)
             if (data.connection) await data.connection.close()
+            this.logCall("close", "connection.close", false)
             this.statements.delete(id)
         } catch (error) {
             console.error(`Error closing statement ${id}: ${error}`)
@@ -268,6 +294,13 @@ export class DatabaseService {
      */
     public async getSchemaObjects(schema: NamespaceNode) : Promise<TypeNode[]> {
         return schema.typeNodes
+    }
+
+    /**
+     * Print diagnostic messages
+     */
+    private logCall(inMethod: string, call: string, start: boolean) {
+        this.outputChannel.appendLine(`${inMethod}: ${start ? "START" : "FINISH"} : ${call}`)
     }
 
 }
