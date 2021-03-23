@@ -146,7 +146,9 @@ export class DatabaseService {
             let connection = await this.dataSource.connect(autocommit)
             this.logCall("execute", "dataSource.connect", false)
             connection.fetchSize = this.currentConnection.fetchLimit || 500
+            this.logCall("execute", "connection.begin", true)
             if (!connection.autoCommit) await connection.begin()
+            this.logCall("execute", "connection.begin", false)
             data.connection = connection
             return await this.doExecute(data)
         }
@@ -160,9 +162,13 @@ export class DatabaseService {
     private async doExecute(data: StatementData) : Promise<SqlResult> {
         try {
             let start = process.hrtime()
+            this.logCall("doExecute", "connection.execute", true)
             let cursor = await data.connection.execute(data.sql.sql)
+            this.logCall("doExecute", "connection.execute", false)
             data.cursor = cursor
+            this.logCall("doExecute", "cursor.fetch", true)
             let rowSet = await cursor.fetch()
+            this.logCall("doExecute", "cursor.fetch", false)
             let elapsed = process.hrtime(start)
             data.result.update(rowSet, elapsed[0], data.connection.autoCommit)
             return data.result
