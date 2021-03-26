@@ -58,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (!password) return
         let host = await vscode.window.showInputBox({ placeHolder: 'Database Host' })
         if (!host) return
-        let port = await vscode.window.showInputBox({ placeHolder: 'Database Port', validateInput: (value) => {return parseInt(value, 10).toString() === "NaN" ? "Must be a number" : undefined})
+        let port = await vscode.window.showInputBox({ placeHolder: 'Database Port', validateInput: (value) => {return parseInt(value, 10).toString() === "NaN" ? "Must be a number" : undefined}})
         if (!port) return
         let database = await vscode.window.showInputBox({ placeHolder: 'Database Name' })
         let connecton = {name: name, driver: driver, username: username, password: password, host: host, port: parseInt(port), database: database} as ConnectionData

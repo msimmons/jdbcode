@@ -77,7 +77,7 @@
       "title": "JDBCode Connection Configuration",
       "properties": {
         "jdbcode.debug": {
-          "type":"boolean",
+          "type": "boolean",
           "default": false,
           "description": "Whether to log diagnostics or not"
         },
@@ -202,6 +202,5 @@
     "parsimmon": "^1.13.0",
     "tsdbc": "https://github.com/msimmons/tsdbc/releases/download/1.0-beta/tsdbc-1.0.0.tgz"
   },
-  "extensionDependencies": [
-  ]
+  "extensionDependencies": []
 }
