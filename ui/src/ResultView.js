@@ -84,13 +84,12 @@ export class ResultView extends BaseView {
   update = (event) => {
     // Only map the columns once, they won't change
     let widths = this.state.widths
-    if (!this.colDefs || this.colDefs.length === 0) {
+    if ((!this.colDefs || this.colDefs.length === 0)) {
       let totalLen = 0
       this.colDefs = event.data.result.columns.map((column, ndx) => {
         totalLen += column.length
-        //return {label: column, prop: column, columnKey: ndx, render: this.renderCell, renderHeader: this.renderHeader }
         let name = (column === ID_NAME) ? ID_REPLACED : column
-        return {name: name, title: column}
+        return {name: name, title: column, rowName: column}
       })
       this.colDefs.forEach((column) => {
         let relativeWidth = Math.floor((((column.title.length+5)*this.colDefs.length)/totalLen)*100)
@@ -99,12 +98,12 @@ export class ResultView extends BaseView {
         widths.push({columnName: column.name, width: relativeWidth})
       })
     }
-    let rows = event.data.result.rows.map((row) => {
+    let rows = event.data.result.rows.map((row, ri) => {
       let rowObject = {}
-      this.colDefs.forEach((column, ndx) => {
-        let name = (column.name === ID_NAME) ? ID_REPLACED : column.name
-        rowObject[name] = row[ndx]
-        rowObject[ID_NAME] = ndx
+      this.colDefs.forEach((column, ci) => {
+        let value = row[column.rowName]
+        rowObject[column.name] = value
+        rowObject[ID_NAME] = ri
       })
       return rowObject
     })
@@ -199,6 +198,8 @@ export class ResultView extends BaseView {
       return this.renderExecuting(this.state.statement.sql, this.cancel)
     }
     if (this.state.result.error) {
+      console.log(this.state.result)
+      console.log(this.state.result.error)
       return this.renderError(this.state.result.error, this.state.statement.sql)
     }
     if (this.state.result.status === 'executing') {

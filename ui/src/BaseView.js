@@ -61,7 +61,7 @@ export class BaseView extends Component {
       <CardHeader title="Error" avatar={<ErrorIcon color="error"/>} />
         <CardContent>
           <Typography variant="h6" component="p">
-            {errorText}
+            {JSON.stringify(errorText)}
           </Typography>
         </CardContent>
         <Typography variant="body1" component="pre" style={{margin: '10px'}}>

@@ -7,8 +7,7 @@ import { DatabaseTreeProvider } from "./database_tree_provider";
 import { SchemaContentProvider } from "./schema_content_provider";
 import { CompletionProvider } from "./completion_provider";
 import { ResultSetWebview } from './resultset_webview';
-import { ObjectNode } from './models';
-import { ObjectOwner, ConnectionData, DriverData, SqlStatement } from 'server-models';
+import { ConnectionData, DriverData, ObjectNode, SqlStatement } from './models';
 import { SchemaWebview } from './schema_webview';
 
 let makeUUID = require('node-uuid').v4;
@@ -19,25 +18,32 @@ const CLOSE_CHOICE = '+ Close'
 
 export class DatabaseController {
 
+    private outputChannel: vscode.OutputChannel
     private statusBarItem: StatusBarItem
     private schemaTreeProvider: DatabaseTreeProvider
     private schemaContentProvider: SchemaContentProvider
     private completionProvider: CompletionProvider
-    private resultSetPanels: ResultSetWebview[] = []
-    private schemaPanels: SchemaWebview[] = []
+    private resultSetViews: ResultSetWebview[] = []
+    private schemaViews: SchemaWebview[] = []
     private docCount = 0
 
     private service: DatabaseService
     private context: vscode.ExtensionContext
 
-    constructor(context: vscode.ExtensionContext, service: DatabaseService) {
-        this.service = service
+    constructor(context: vscode.ExtensionContext) {
         this.context = context
     }
 
     start() {
+        this.outputChannel = vscode.window.createOutputChannel("JDBCode")
+        let config = this.getConfig()
+        this.service = new DatabaseService(this.outputChannel, config.get<boolean>('debug'))
         this.createStatusBar()
         this.registerProviders()
+    }
+
+    private getConfig() : vscode.WorkspaceConfiguration {
+        return vscode.workspace.getConfiguration("jdbcode")
     }
 
     private createStatusBar() {
@@ -154,9 +160,9 @@ export class DatabaseController {
         /**
          * Open the query result UI and execute the query updating the UI with the results
          */
-        let panel = new ResultSetWebview(this.context, this.service)
-        panel.create(sqlStatement, ++this.docCount)
-        this.resultSetPanels.push(panel)
+        let webview = new ResultSetWebview(this.context, this.service)
+        webview.create(sqlStatement, ++this.docCount)
+        this.resultSetViews.push(webview)
     }
 
     /**
@@ -170,9 +176,9 @@ export class DatabaseController {
             let items = []
             types.forEach((tn) => {
                 tn.forEach(tt => {
-                    items = items.concat(tt.objects.map((o) => {
-                        let ownerString = this.getOwnerString(o.data.owner)
-                        return { label: `${ownerString}.${o.data.name}`, description: o.data.type, item: o }
+                    items = items.concat(tt.objectNodes.map((node) => {
+                        let ownerString = node.object.namespace
+                        return { label: `${ownerString}.${node.object.name}`, description: tt.objectType, item: node }
                     }))
                 })
             })
@@ -188,24 +194,23 @@ export class DatabaseController {
      */
     async showDescribe(node: ObjectNode) {
         let panel = new SchemaWebview(this.context, this.service)
-        let docName = this.getOwnerString(node.data.owner) + '.' + node.data.name + ' (' + node.data.type + ')'
+        let docName = `${node.object.namespace}.${node.object.name} (${node.objectType})`
         panel.create(node, docName)
-        this.schemaPanels.push(panel)
+        this.schemaViews.push(panel)
     }
 
     /**
      * Disconnect from the current connection if any
      */
     async disconnect() {
-        vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Disconnecting" }, async (progress) => {
-            progress.report({ message: `Disconnecting  ${this.service.getConnection().name}` })
-            this.resultSetPanels.forEach(panel => { panel.close() })
-            this.resultSetPanels = []
-            this.schemaPanels.forEach(panel => { panel.close() })
-            this.schemaPanels = []
+        await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Disconnecting" }, async (progress) => {
+            if (this.service.getConnection()) {progress.report({ message: `Disconnecting  ${this.service.getConnection().name}` })}
+            for (const view of this.resultSetViews) await view.close()
+            this.resultSetViews = []
+            for (const view of this.schemaViews) view.close()
+            this.schemaViews = []
             this.schemaTreeProvider.clear()
             this.statusBarItem.text = '$(database)'
-            // Tell server to disconnect (close current statements and connections)
             try {
                 await this.service.disconnect()
                 vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', false)
@@ -214,10 +219,6 @@ export class DatabaseController {
                 vscode.window.showErrorMessage('Error closing connection: ' + err)
             }
         })
-    }
-
-    private getOwnerString(owner: ObjectOwner) {
-        return owner.catalog ? owner.catalog : owner.schema
     }
 
     private trimSql(sql: string) : string {

@@ -1,8 +1,8 @@
 {
   "name": "jdbcode",
   "displayName": "JDBCode",
-  "description": "JDBC extension built on jvmcode",
-  "version": "1.1.0",
+  "description": "Database query extension",
+  "version": "2.1.0",
   "publisher": "contrapt",
   "repository": {
     "url": "https://github.com/msimmons/jdbcode"
@@ -76,26 +76,29 @@
     "configuration": {
       "title": "JDBCode Connection Configuration",
       "properties": {
+        "jdbcode.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to log diagnostics or not"
+        },
         "jdbcode.drivers": {
           "type": "array",
-          "description": "List of JDBC Drivers",
+          "description": "List of TSDBC Drivers",
           "items": {
             "title": "Driver",
             "type": "object",
             "required": [
               "name",
-              "driverClass",
-              "jarFile"
+              "driverFile"
             ],
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "User name for the driver"
               },
-              "driverClass": {
-                "type": "string"
-              },
-              "jarFile": {
-                "type": "string"
+              "driverFile": {
+                "type": "string",
+                "description": "The full path to the driver.js file"
               }
             }
           }
@@ -106,25 +109,41 @@
           "items": {
             "title": "Connection",
             "type": "object",
+            "required": [
+              "name",
+              "driver",
+              "username",
+              "password",
+              "host"
+            ],
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "User name for the connection"
               },
               "driver": {
-                "type": "string"
+                "type": "string",
+                "description": "The name of the driver to use"
               },
               "username": {
-                "type": "string"
+                "type": "string",
+                "description": "Login user name"
               },
               "password": {
-                "type": "string"
-              },
-              "url": {
-                "type": "string"
-              },
-              "validationQuery": {
                 "type": "string",
-                "description": "A query to validate the connection.  Optional since most drivers support JDBC4 isValid() -- if your driver does not, supply a query"
+                "description": "Login password"
+              },
+              "host": {
+                "type": "string",
+                "description": "The database host name"
+              },
+              "port": {
+                "type": "integer",
+                "description": "The database port"
+              },
+              "database": {
+                "type": "string",
+                "description": "The database name"
               },
               "fetchLimit": {
                 "type": "integer",
@@ -161,23 +180,27 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "./gradlew deploy; npm run compile; cd ui && npm run deploy",
+    "vscode:prepublish": "npm run compile; cd ui && npm run deploy",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node ./node_modules/vscode/bin/test",
-    "deploy": "./gradlew deploy; npm run compile; cd ui && npm run deploy"
+    "test": "mocha -r ts-node/register test/unit/**/*.test.ts",
+    "deploy": "npm run compile; cd ui && npm run deploy"
   },
   "devDependencies": {
+    "@types/chai": "^4.2.11",
     "@types/mocha": "^2.2.48",
     "@types/node": "^13.7.0",
+    "@types/parsimmon": "^1.10.1",
     "@types/vscode": "^1.42.0",
-    "mocha": "^7.0.1",
+    "chai": "^4.2.0",
+    "mocha": "^7.1.2",
+    "ts-node": "^8.9.1",
     "typescript": "^3.7.5"
   },
   "dependencies": {
-    "node-uuid": "^1.4.8"
+    "node-uuid": "^1.4.8",
+    "parsimmon": "^1.13.0",
+    "tsdbc": "https://github.com/msimmons/tsdbc/releases/download/1.0-beta/tsdbc-1.0.0.tgz"
   },
-  "extensionDependencies": [
-    "contrapt.jvmcode"
-  ]
+  "extensionDependencies": []
 }

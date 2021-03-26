@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { CompletionItemKind } from 'vscode';
 import { trimSql } from './extension'
 import { DatabaseService } from './database_service';
-import { TableData, ColumnExpr, TableItem, SyntaxError, ValueExpr } from 'server-models';
+import { TableData } from 'tsdbc'
 
 export class CompletionProvider implements vscode.CompletionItemProvider {
 
@@ -30,10 +30,10 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
             this.schemaItems.push(si)
             schema.typeNodes.forEach((type) => {
                 type.objects.forEach((obj) => {
-                    let item = new vscode.CompletionItem(obj.data.name, CompletionItemKind.Class)
-                    item.detail = obj.data.owner.catalog ? obj.data.owner.catalog : obj.data.owner.schema
-                    item.sortText = `1:${obj.data.name}`
-                    if (type.data.name === 'table' || type.data.name === 'view') {
+                    let item = new vscode.CompletionItem(obj.name, CompletionItemKind.Class)
+                    item.detail = obj.namespace
+                    item.sortText = `1:${obj.name}`
+                    if (type.objectType === 'table' || type.objectType === 'view') {
                         this.tableItems.push(item)
                     }
                 })
@@ -60,18 +60,19 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
 
     private async getCompletionItems(sql: string, caretOffset: number, position: vscode.Position) {
         let item = await this.service.parse(sql, caretOffset) 
-        switch (item.type) {
-            case 'COLUMN_EXPR':
-                return this.handleColumnExpr(item as ColumnExpr, position)
-            case 'VALUE_EXPR':
-                return this.handleValueExpr(item as ValueExpr, position)
-            case 'TABLE_ITEM':
-                return this.handleTableItem(item as TableItem, position)
-            case 'SYNTAX_ERROR':
-                return this.handleSyntaxError(item as SyntaxError, position)
-            default:
-                return this.keywords
-        }
+        return []
+        // switch (item.type) {
+        //     case 'COLUMN_EXPR':
+        //         return this.handleColumnExpr(item as ColumnExpr, position)
+        //     case 'VALUE_EXPR':
+        //         return this.handleValueExpr(item as ValueExpr, position)
+        //     case 'TABLE_ITEM':
+        //         return this.handleTableItem(item as TableItem, position)
+        //     case 'SYNTAX_ERROR':
+        //         return this.handleSyntaxError(item as SyntaxError, position)
+        //     default:
+        //         return this.keywords
+        // }
     }
 
     /**
@@ -102,7 +103,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
      * Get all the columns for the given tables -- optionally also prepend the list of aliases
      * @param tableItems A list of TableItems to get columns from
      */
-    private async getColumnItems(tableItems: TableItem[], aliases: string[] = []) : Promise<vscode.CompletionItem[]> {
+    private async getColumnItems(tableItems: any[], aliases: string[] = []) : Promise<vscode.CompletionItem[]> {
         let described = tableItems.map(async ti => await this.service.describeByName(ti.owner, ti.name))
         let aliasItems = aliases.map(a => {
             let ai = new vscode.CompletionItem(a, vscode.CompletionItemKind.Class)
@@ -112,7 +113,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         })
         return Promise.all(described).then(objectNodes => {
             let columnItems = []
-            let tableData = objectNodes.filter(node => node).map(node => node.resolved as TableData)
+            let tableData = objectNodes.filter(node => node).map(node => node.object as TableData)
             tableData.forEach(td => columnItems = columnItems.concat(td.columns.map(c => {
                 let ci = new vscode.CompletionItem(c.name, vscode.CompletionItemKind.Field)
                 ci.detail = td.name
@@ -130,8 +131,8 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
      * 
      * @param item Expecting a column expression
      */
-    private async handleColumnExpr(item: ColumnExpr, position: vscode.Position): Promise<vscode.CompletionItem[]> {
-        let tableItems : TableItem[] = []
+    private async handleColumnExpr(item: any, position: vscode.Position): Promise<vscode.CompletionItem[]> {
+        let tableItems = []
         let aliasNames = []
         // If no table alias
         if (!item.tableAlias) {
@@ -151,8 +152,8 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
      * For ValueExpr (parts of where, order, other random clause) we will just return approprite lists of columns
      * @param item 
      */
-    private async handleValueExpr(item: ValueExpr, position: vscode.Position): Promise<vscode.CompletionItem[]> {
-        let tableItems : TableItem[] = []
+    private async handleValueExpr(item: any, position: vscode.Position): Promise<vscode.CompletionItem[]> {
+        let tableItems : any[] = []
         let aliasNames = []
         for (var key in item.tableMap) {
             aliasNames.push(key)
@@ -169,7 +170,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         }
     }
 
-    private async handleTableItem(item: TableItem, position: vscode.Position) : Promise<vscode.CompletionItem[]> {
+    private async handleTableItem(item: any, position: vscode.Position) : Promise<vscode.CompletionItem[]> {
         if (item.owner) {
             return this.tableItems.filter(ti => ti.detail === item.owner)
         }
@@ -178,7 +179,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         }
     }
 
-    private async handleSyntaxError(item: SyntaxError, position: vscode.Position) : Promise<vscode.CompletionItem[]> {
+    private async handleSyntaxError(item: any, position: vscode.Position) : Promise<vscode.CompletionItem[]> {
         return item.expected.map((it) => {return new vscode.CompletionItem(it)})
     }
 }

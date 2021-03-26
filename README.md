@@ -1,14 +1,14 @@
 # JDBCode
 
-This extension provides database services for any SQL database with a JDBC driver.  We use the extension _contrapt.jvmcode_ to provide a JVM
-server and event bus on which to run the JDBC services.
+This extension provides database description and statement execution services for any SQL database with a TSDBC driver. TSDBC is a TypeScript library
+that can load drivers for different database vendors
 
 ## Features
 
 - Database schema tree view for explorer
-- Connect to any JDBC datasource
+- Connect to any TSDBC datasource
 - Execute SQL statements
-- Provide table and column completions
+- _Provide table and column completions_
 
 ## Requirements
 
@@ -35,4 +35,8 @@ Users appreciate release notes as you update your extension.
 
 ### 1.0.0
 
-Initial release of ...
+Initial release
+
+### 2.0.0
+
+Converted from JDBC to TSDBC and no longer requires JVM services
