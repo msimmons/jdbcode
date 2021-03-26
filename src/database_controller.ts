@@ -30,15 +30,20 @@ export class DatabaseController {
     private service: DatabaseService
     private context: vscode.ExtensionContext
 
-    constructor(context: vscode.ExtensionContext, service: DatabaseService) {
-        this.service = service
+    constructor(context: vscode.ExtensionContext) {
         this.context = context
-        this.outputChannel = vscode.window.createOutputChannel("JDBCode")
     }
 
     start() {
+        this.outputChannel = vscode.window.createOutputChannel("JDBCode")
+        let config = this.getConfig()
+        this.service = new DatabaseService(this.outputChannel, config.get<boolean>('debug'))
         this.createStatusBar()
         this.registerProviders()
+    }
+
+    private getConfig() : vscode.WorkspaceConfiguration {
+        return vscode.workspace.getConfiguration("jdbcode")
     }
 
     private createStatusBar() {
@@ -62,16 +67,12 @@ export class DatabaseController {
 
     async connect(connection: ConnectionData, driver: DriverData, command?: string) {
         // Disconnect first if necessary
-        this.outputChannel.appendLine("start disconnect")
         await this.disconnect()
-        this.outputChannel.appendLine("finish disconnect")
         // Send connection info to server, it will create connection pool if it doesn't already exist
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Connect to DB" }, async (progress) => {
             progress.report({ message: 'Connecting to ' + connection.name })
             try {
-                this.outputChannel.appendLine("start connect")
                 await this.service.connect(connection, driver)
-                this.outputChannel.appendLine("finish connect")
                 this.schemaTreeProvider.clear()
                 this.completionProvider.updateSchemas()
                 this.statusBarItem.text = '$(database) ' + connection.name
@@ -94,9 +95,7 @@ export class DatabaseController {
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Refreshing DB" }, async (progress) => {
             progress.report({ message: `Refreshing  ${this.service.getConnection().name}` })
             try {
-                this.outputChannel.appendLine("start refresh")
                 await this.service.refresh()
-                this.outputChannel.appendLine("finish refresh")
                 this.schemaTreeProvider.clear()
             }
             catch (error) {
@@ -213,9 +212,7 @@ export class DatabaseController {
             this.schemaTreeProvider.clear()
             this.statusBarItem.text = '$(database)'
             try {
-                this.outputChannel.appendLine("start disconnect")
                 await this.service.disconnect()
-                this.outputChannel.appendLine("finish disconnect")
                 vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', false)
             }
             catch (err) {

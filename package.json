@@ -76,6 +76,11 @@
     "configuration": {
       "title": "JDBCode Connection Configuration",
       "properties": {
+        "jdbcode.debug": {
+          "type":"boolean",
+          "default": false,
+          "description": "Whether to log diagnostics or not"
+        },
         "jdbcode.drivers": {
           "type": "array",
           "description": "List of TSDBC Drivers",
@@ -133,7 +138,7 @@
                 "description": "The database host name"
               },
               "port": {
-                "type": "string",
+                "type": "integer",
                 "description": "The database port"
               },
               "database": {

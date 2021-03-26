@@ -74,8 +74,6 @@ export class ResultSetWebview {
     }
 
     private sendMessage() {
-        console.log('sending message')
-        console.log(this.sqlResult)
         this.panel.webview.postMessage({statement: this.sqlStatement, result: this.sqlResult})
     }
 

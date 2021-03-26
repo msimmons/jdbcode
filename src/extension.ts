@@ -5,13 +5,13 @@ import * as vscode from 'vscode';
 import {  ConfigurationTarget } from 'vscode'
 import { DatabaseController } from './database_controller';
 import { DatabaseService } from './database_service';
+import { ConnectionData, DriverData } from './models';
 
 let dbController: DatabaseController
 
 export function activate(context: vscode.ExtensionContext) {
 
-    let dbService = new DatabaseService(context)
-    dbController = new DatabaseController(context, dbService)
+    dbController = new DatabaseController(context)
     dbController.start()
 
     /**
@@ -40,8 +40,30 @@ export function activate(context: vscode.ExtensionContext) {
     /**
      * Add a new connection definition
      */
-    context.subscriptions.push(vscode.commands.registerCommand('jdbcode.addConnection', () => {
-
+    context.subscriptions.push(vscode.commands.registerCommand('jdbcode.addConnection', async () => {
+        let config = vscode.workspace.getConfiguration("jdbcode")
+        let connections = config.get('connections') as Array<ConnectionData>
+        let drivers = config.get('drivers') as Array<DriverData>
+        let name = await vscode.window.showInputBox({ placeHolder: 'A name for the connection' })
+        if (!name) return
+        if (connections.find((c) => { return c.name === name })) {
+            vscode.window.showErrorMessage(`Connection '${name}' already exists`)
+            return
+        }
+        let driver = await vscode.window.showQuickPick(drivers.map(d=>d.name), {canPickMany: false, placeHolder: 'Choose Driver' })
+        if (!driver) return
+        let username = await vscode.window.showInputBox({ placeHolder: 'Username' })
+        if (!username) return
+        let password = await vscode.window.showInputBox({ placeHolder: 'Password', password: true })
+        if (!password) return
+        let host = await vscode.window.showInputBox({ placeHolder: 'Database Host' })
+        if (!host) return
+        let port = await vscode.window.showInputBox({ placeHolder: 'Database Port', validateInput: (value) => {return parseInt(value, 10).toString() === "NaN" ? "Must be a number" : undefined})
+        if (!port) return
+        let database = await vscode.window.showInputBox({ placeHolder: 'Database Name' })
+        let connecton = {name: name, driver: driver, username: username, password: password, host: host, port: parseInt(port), database: database} as ConnectionData
+        connections.push(connecton)
+        await config.update('connections', connections, ConfigurationTarget.Workspace)
     }))
 
     /**

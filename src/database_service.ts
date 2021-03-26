@@ -14,7 +14,7 @@ interface StatementData {
 export class DatabaseService {
 
     private outputChannel: vscode.OutputChannel
-    private context: vscode.ExtensionContext
+    private debug: boolean
     private nsNodes: NamespaceNode []
     /* Map objects by name for convenience */
     private objectMap: Map<string, ObjectNode[]> = new Map()
@@ -22,9 +22,16 @@ export class DatabaseService {
     private dataSource: DataSource
     private statements = new Map<string, StatementData>()
 
-    constructor(context: vscode.ExtensionContext) {
-        this.context = context
-        this.outputChannel = vscode.window.createOutputChannel("JDBCode")
+    constructor(channel: vscode.OutputChannel, debug: boolean) {
+        this.outputChannel = channel
+        this.debug = debug
+    }
+
+    /**
+     * Set debug on or off
+     */
+    setDebug(debug: boolean) {
+        this.debug = debug;
     }
 
     /**
@@ -306,6 +313,7 @@ export class DatabaseService {
      * Print diagnostic messages
      */
     private logCall(inMethod: string, call: string, start: boolean) {
+        if (!this.debug) return
         this.outputChannel.appendLine(`${inMethod}: ${start ? "START" : "FINISH"} : ${call}`)
     }
 
