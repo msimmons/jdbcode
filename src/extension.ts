@@ -77,8 +77,8 @@ export function activate(context: vscode.ExtensionContext) {
      * Execute the currently selected SQL statement on the current connection.  If no current
      * connection is chosen, allow user to choose one.
      */
-    context.subscriptions.push(vscode.commands.registerCommand("jdbcode.execute", () => {
-        dbController.executeSql()
+    context.subscriptions.push(vscode.commands.registerCommand("jdbcode.execute", (range?: vscode.Range) => {
+        dbController.executeSql(false, range)
     }))
 
     /**

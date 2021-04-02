@@ -12,13 +12,21 @@ insert ';' into foo;
 delete from foo;
 
 delete from bar
+
+delete from foo
+
 `
 describe('A SQL Grammar', () => {
 
     it('Parses separated statements', () => {
         let result = Grammar.Statements.tryParse(separated)
-        expect(result.length).to.be.eq(9)
-        
+        expect(result.length).eql(10)
+        expect(result[0].value).eql('select * from foo')
+        expect(result[2].value).eql('insert foo into bar\nwhere foo = 8')
+        expect(result[4].value).eql("insert ';' into foo")
+        expect(result[6].value).eql("delete from foo")
+        expect(result[8].value).eql("delete from bar")
+        expect(result[9].value).eql("delete from foo")
     })
 
     it('Parses identifiers', () => {

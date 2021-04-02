@@ -27,7 +27,7 @@ export const Grammar = P.createLanguage<{
     __: string
     Separator: Node<'Separator', string>
     StatementContent: Node<'SQL',string>
-    Statements: string[]
+    Statements: Node<'Separator'|'SQL', string>[]
 
     STRING_LITERAL: string
     NUMERIC_LITERAL: string
