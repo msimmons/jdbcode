@@ -1,5 +1,4 @@
 import { Grammar } from './sql_grammar'
-import * as vscode from 'vscode'
 
 export interface ContentResult {
   sql: string
@@ -27,7 +26,20 @@ export class SqlParser {
    */
   findStatement(text: string, start: number, end: number) : string|undefined {
     let statements = Grammar.Statements.tryParse(text)
-    let statement = statements.find(s => s.start.offset <= start && s.end.offset >= end)
-    return statement?.value
+    let statementIndex = statements.findIndex(s => s.start.offset <= start && s.end.offset >= end)
+    if (statementIndex === -1) return undefined
+    // If we are on a separator, return the previous statement
+    if (statements[statementIndex].name === 'Separator' && statementIndex > 0) statementIndex--;
+    return statements[statementIndex].value
+  }
+
+  /**
+   * Find the type of symbol we are on at the current position
+   */
+  findSymbol(text: string, offset: number) : string|undefined {
+    let statement = this.findStatement(text, offset, offset)
+    let parsed = Grammar.SelectStatement.tryParse(statement)
+    console.log(parsed)
+    return undefined
   }
 }
