@@ -3,6 +3,7 @@
 import * as vscode from 'vscode'
 import { NamespaceNode, TypeNode, ObjectNode, SqlStatement, SqlResult, ConnectionData, DriverData } from './models';
 import { DriverConfig, DriverManager, DatabaseMetadata, DataSource, Connection, RowSet, Result } from 'tsdbc'
+import { SqlParser } from './sql_parser'
 
 interface StatementData {
     sql: SqlStatement
@@ -21,6 +22,7 @@ export class DatabaseService {
     private currentConnection?: ConnectionData
     private dataSource: DataSource
     private statements = new Map<string, StatementData>()
+    private parser = new SqlParser()
 
     constructor(channel: vscode.OutputChannel, debug: boolean) {
         this.outputChannel = channel
@@ -292,7 +294,12 @@ export class DatabaseService {
      * Parse the given SQL and returning item expcted at cursor
      */
     public async parse(sql: string, offset: number) : Promise<any> {
-        return undefined
+        try {
+            return this.parser.findSymbol(sql, offset)
+        } catch (error) {
+            console.log(error)
+            return undefined
+        }
     }
 
     /**

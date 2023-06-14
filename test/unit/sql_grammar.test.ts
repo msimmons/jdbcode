@@ -56,6 +56,7 @@ describe('A SQL Grammar', () => {
                 {id: '"mixed".db.table', value: 'mixed.db.table'}
             ].forEach(id => {
                 let result = Grammar.Identifier.tryParse(id.id)
+                console.log(result)
                 expect(result.value).eql(id.value)
             })
         })
@@ -70,25 +71,47 @@ describe('A SQL Grammar', () => {
                 '32.45'
             ].forEach(id => {
                 let result = Grammar.Literal.tryParse(id)
+                expect(result.value).eql(id)
+                console.log(result)
             })
         })
     
         it ('Parses function expressions', () => {
-            let result = Grammar.FunctionExpression.tryParse('func(col1, col2)')
-            console.log(result)
+            [
+                'func(col1, col2)'
+            ].forEach(id => {
+                let result = Grammar.FunctionExpression.tryParse(id)
+                console.log(JSON.stringify(result, undefined, 2))
+            })
         })
 
         it ('Parses value expressions', () => {
-            let result = Grammar.ValueExpression.tryParse('(col1 col2)')
-            console.log(result)
+            [
+                '(col1 (col3 by col4) col2)',
+                '(col1 func(2, a))',
+                'func(1,(partion by foo))'
+            ].forEach(id => {
+                let result = Grammar.ValueExpression.tryParse(id)
+                console.log(JSON.stringify(result, undefined, 2))
+            })
+        })
+
+        it ('Parses new value expressions', () => {
+            [
+                'case when a=b then 1 else 0 end',
+                '(col1 (col3 by col4) col2) over (partition by id order by userid, something)',
+            ].forEach(id => {
+                let result = Grammar.ValueStatement.tryParse(id)
+                console.log(JSON.stringify(result, undefined, 2))
+            })
         })
 
         it ('Parses a select item', () => {
             let result = Grammar.SelectItem.tryParse('col1 as foo')
-            console.log(result)
+            console.log(JSON.stringify(result, undefined, 2))
         })
 
-        it('Parses select items', () => {
+        it('Parses select item', () => {
             [
                 'col1',
                 'col1 as foo',
@@ -100,11 +123,33 @@ describe('A SQL Grammar', () => {
                 "func()",
                 "func(1,2)",
                 "(group by 3 order by 8)",
-                "(partition by substr('',3) order by foo) as bar"
+                "(partition by substr('',3) order by foo) as bar",
+                "(select foo from bar) boo"
             ].forEach(id => {
                 let result = Grammar.SelectItem.tryParse(id)
-                console.log(result)
-                //console.log(JSON.stringify(result, undefined, 2))
+                //console.log(result)
+                console.log(JSON.stringify(result, undefined, 2))
+            })
+        })
+
+        it('Parses select items', () => {
+            [
+                'col1, col2',
+                'col1 as foo',
+                'col1 foo',
+                'col1 "foo"',
+                'col1 as "foo"',
+                '"col1" as "foo"',
+                'my.tab1.col1 ali',
+                "func()",
+                "func(1,2)",
+                "(group by 3 order by 8)",
+                "(partition by substr('',3) order by foo) as bar, col2 as foo",
+                "(select foo from bar) boo"
+            ].forEach(id => {
+                let result = Grammar.SelectItems.tryParse(id)
+                //console.log(result)
+                console.log(JSON.stringify(result, undefined, 2))
             })
         })
 
@@ -125,16 +170,19 @@ describe('A SQL Grammar', () => {
         it('Parses select statement', () => {
             [
                 'select col1 from table',
+                'select c from t where a=b and substr(a, 3) = \'hii\' order by fun',
                 'select col1 as foo from table',
                 'select col1 foo from table',
                 'select col1 "foo as" from table',
                 'select col1, col2 from table',
                 'select col1 al1, col2 "foo" from table',
                 'select a.* as a from foo a',
-                "select (partition by substr('',3) order by foo) as bar from table"
+                "select (partition by substr('',3) order by foo) as bar from table",
+                "select case when a=b then 1 else 0 end foo from bar"
             ].forEach(id => {
+                console.log(id)
                 let result = Grammar.SelectStatement.tryParse(id)
-                console.log(result)
+                console.log(JSON.stringify(result, undefined,2))
             })
         })
     })
