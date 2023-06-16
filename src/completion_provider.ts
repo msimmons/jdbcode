@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { CompletionItemKind } from 'vscode';
 import { trimSql } from './extension'
 import { DatabaseService } from './database_service';
-import { TableData } from 'tsdbc'
+import { TableData } from 'jdbcode-api'
 
 export class CompletionProvider implements vscode.CompletionItemProvider {
 
@@ -59,7 +59,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
     }
 
     private async getCompletionItems(sql: string, caretOffset: number, position: vscode.Position) {
-        let item = await this.service.parse(sql, caretOffset) 
+        let item = await this.service.parse(sql, caretOffset)
         return []
         // switch (item.type) {
         //     case 'COLUMN_EXPR':
@@ -128,7 +128,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
      * If tableMap is empty, show tables and complete with a "select * from <table>"
      * If no alias, show aliases and columns from all tables
      * If alias, show columns from the alias
-     * 
+     *
      * @param item Expecting a column expression
      */
     private async handleColumnExpr(item: any, position: vscode.Position): Promise<vscode.CompletionItem[]> {
@@ -150,7 +150,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
 
     /**
      * For ValueExpr (parts of where, order, other random clause) we will just return approprite lists of columns
-     * @param item 
+     * @param item
      */
     private async handleValueExpr(item: any, position: vscode.Position): Promise<vscode.CompletionItem[]> {
         let tableItems : any[] = []
