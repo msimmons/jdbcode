@@ -7,14 +7,14 @@ import { DatabaseTreeProvider } from "./database_tree_provider";
 import { SchemaContentProvider } from "./schema_content_provider";
 import { CompletionProvider } from "./completion_provider";
 import { ResultSetWebview } from './resultset_webview';
-import { ConnectionData, DriverData, ObjectNode, SqlStatement } from './models';
+import { ConnectionData, ObjectNode, SqlStatement } from './models';
 import { SchemaWebview } from './schema_webview';
 import { CodeLensProvider } from './code_lens_provider';
 import { SqlParser } from './sql_parser';
+import { DataSourceProvider } from 'jdbcode-api';
 
 let makeUUID = require('node-uuid').v4;
 
-const ADD_DRIVER_CHOICE = '+ Add Driver'
 const ADD_CONNECTION_CHOICE = '+ Add Connection'
 const CLOSE_CHOICE = '+ Close'
 
@@ -30,6 +30,7 @@ export class DatabaseController {
     private schemaViews: SchemaWebview[] = []
     private docCount = 0
 
+    private providerMap: Map<string, DataSourceProvider> = new Map<string, DataSourceProvider>()
     private service: DatabaseService
     private parser: SqlParser
     private context: vscode.ExtensionContext
@@ -72,14 +73,22 @@ export class DatabaseController {
         vscode.languages.registerCodeLensProvider('sql', this.codeLensProvider)
     }
 
-    async connect(connection: ConnectionData, driver: DriverData, command?: string, commandArgs?: any[]) {
+    registerDataSourceProvider(provider: DataSourceProvider) {
+        this.providerMap.set(provider.name, provider)
+    }
+
+    getProviderNames() : Array<string> {
+        return Array.from(this.providerMap.keys())
+    }
+
+    async connect(connection: ConnectionData, provider: DataSourceProvider, command?: string, commandArgs?: any[]) {
         // Disconnect first if necessary
         await this.disconnect()
         // Send connection info to server, it will create connection pool if it doesn't already exist
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Connect to DB" }, async (progress) => {
             progress.report({ message: 'Connecting to ' + connection.name })
             try {
-                await this.service.connect(connection, driver)
+                await this.service.connect(connection, provider)
                 this.schemaTreeProvider.clear()
                 this.completionProvider.updateSchemas()
                 this.statusBarItem.text = '$(database) ' + connection.name
@@ -119,21 +128,19 @@ export class DatabaseController {
     async chooseAndConnect(command?: string, commandArgs?: any[]) {
         let config = vscode.workspace.getConfiguration("jdbcode")
         let connections = config.get('connections') as ConnectionData[]
-        let drivers = config.get('drivers') as DriverData[]
-        let choices = [ADD_DRIVER_CHOICE, ADD_CONNECTION_CHOICE]
+        let choices = [ADD_CONNECTION_CHOICE]
         if (this.service.getConnection()) choices.push(CLOSE_CHOICE + ': ' + this.service.getConnection().name)
         choices = choices.concat(connections.map((it) => { return it.name }))
         vscode.window.showQuickPick(choices, {}).then((choice) => {
             if (!choice) return
-            else if (choice.startsWith(ADD_DRIVER_CHOICE)) vscode.commands.executeCommand('jdbcode.addDriver')
             else if (choice.startsWith(ADD_CONNECTION_CHOICE)) vscode.commands.executeCommand('jdbcode.addConnection')
             else if (choice.startsWith(CLOSE_CHOICE)) vscode.commands.executeCommand('jdbcode.disconnect')
             else {
                 let connection = connections.find((it) => { return it.name === choice })
                 if (!connection) return;
-                let driver = drivers.find((it) => { return it.name === connection.driver })
-                if (!driver) vscode.window.showErrorMessage('Could not find driver for connection ' + choice)
-                this.connect(connection, driver, command, commandArgs)
+                let provider = this.providerMap.get(connection.driver)
+                if (!provider) vscode.window.showErrorMessage('Could not find provider for connection ' + choice)
+                this.connect(connection, provider, command, commandArgs)
             }
         })
     }
@@ -208,7 +215,7 @@ export class DatabaseController {
     }
 
     /**
-     * Show a description of the given object 
+     * Show a description of the given object
      */
     async showDescribe(node: ObjectNode) {
         let panel = new SchemaWebview(this.context, this.service)
@@ -238,5 +245,5 @@ export class DatabaseController {
             }
         })
     }
- 
+
 }

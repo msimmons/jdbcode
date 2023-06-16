@@ -184,7 +184,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "test": "mocha -r ts-node/register test/unit/**/*.test.ts",
-    "deploy": "npm run compile; cd ui && npm run deploy"
+    "deploy": "npm run compile; cd ui && npm run deploy",
+    "build-api": "tsc -d --declarationMap src/data_source.ts --outDir api-out"
   },
   "devDependencies": {
     "@types/chai": "^4.2.11",
@@ -200,7 +201,7 @@
   "dependencies": {
     "node-uuid": "^1.4.8",
     "parsimmon": "^1.13.0",
-    "tsdbc": "https://github.com/msimmons/tsdbc/releases/download/1.0-beta/tsdbc-1.0.0.tgz"
+    "jdbcode-api": "file:./api"
   },
   "extensionDependencies": []
 }

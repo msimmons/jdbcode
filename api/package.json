@@ -1,0 +1,25 @@
+{
+  "name": "jdbcode-api",
+  "version": "1.0.0",
+  "description": "API For Data Source Providers",
+  "main": "./out/src/data_source.js",
+  "files": [
+    "out/src/**"
+  ],
+  "scripts": {
+    "build": "tsc -p ./",
+    "prepack": "mkdir -p dist",
+    "postpack": "mv *.tgz dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/msimmons/jdbcode"
+  },
+  "keywords": [
+    "database",
+    "typescript"
+  ],
+  "author": "contrapt",
+  "license": "ISC",
+  "devDependencies": {}
+}

@@ -1,9 +1,10 @@
 'use strict'
 
 import * as vscode from 'vscode'
-import { NamespaceNode, TypeNode, ObjectNode, SqlStatement, SqlResult, ConnectionData, DriverData } from './models';
-import { DriverConfig, DriverManager, DatabaseMetadata, DataSource, Connection, RowSet, Result } from 'tsdbc'
+import { NamespaceNode, TypeNode, ObjectNode, SqlStatement, SqlResult, ConnectionData } from './models';
+import { DriverConfig, DatabaseMetadata, DataSource, Connection, Result } from 'jdbcode-api'
 import { SqlParser } from './sql_parser'
+import { DataSourceProvider } from 'jdbcode-api';
 
 interface StatementData {
     sql: SqlStatement
@@ -46,17 +47,16 @@ export class DatabaseService {
     /**
      * Open a connection with given connection and driver config
      */
-    public async connect(connection: ConnectionData, driver: DriverData) {
-        let dbDriver = await DriverManager.load(driver.driverFile)
+    public async connect(connection: ConnectionData, provider: DataSourceProvider) {
         let driverConfig = <DriverConfig>{
-            host: connection.host, 
-            port: connection.port, 
-            username: connection.username, 
-            password: connection.password, 
+            host: connection.host,
+            port: connection.port,
+            username: connection.username,
+            password: connection.password,
             database: connection.database
             // TODO: vendorConfig
         }
-        this.dataSource = dbDriver.load(driverConfig)
+        this.dataSource = provider.createDataSource(driverConfig)
         let metaData = await this.dataSource.metaData()
         this.currentConnection = connection
         this.mapSchemaNodes(metaData)
@@ -72,7 +72,7 @@ export class DatabaseService {
 
     /**
      * Turn the ConnectionResult into SchemaNodes
-     * @param data 
+     * @param data
      */
     private mapSchemaNodes(data: DatabaseMetadata) {
         this.objectMap.clear()
@@ -82,7 +82,7 @@ export class DatabaseService {
         this.nsNodes = data.namespaces
             .filter(nsNode => !excludes.find(e => nsNode.name.startsWith(e)))
             .filter(nsNode => !includes.length || includes.find(i => nsNode.name.startsWith(i)))
-            .map((ns) => { 
+            .map((ns) => {
                 let nsNode = new NamespaceNode(ns)
                 if (ns.tables.length) nsNode.typeNodes.push(new TypeNode("table", ns.tables))
                 if (ns.views.length) nsNode.typeNodes.push(new TypeNode("view", ns.views))
@@ -167,7 +167,7 @@ export class DatabaseService {
             return data.result
         }
     }
-    
+
     private async doExecute(data: StatementData) : Promise<SqlResult> {
         try {
             let start = process.hrtime()
