@@ -74,11 +74,16 @@ export class DatabaseController {
     }
 
     registerDataSourceProvider(provider: DataSourceProvider) {
+        this.outputChannel.appendLine(`Registering data source provider ${provider.name}`)
         this.providerMap.set(provider.name, provider)
     }
 
     getProviderNames() : Array<string> {
         return Array.from(this.providerMap.keys())
+    }
+
+    logToChannel(message: string) {
+        this.outputChannel.appendLine(message);
     }
 
     async connect(connection: ConnectionData, provider: DataSourceProvider, command?: string, commandArgs?: any[]) {
@@ -139,8 +144,11 @@ export class DatabaseController {
                 let connection = connections.find((it) => { return it.name === choice })
                 if (!connection) return;
                 let provider = this.providerMap.get(connection.driver)
-                if (!provider) vscode.window.showErrorMessage('Could not find provider for connection ' + choice)
-                this.connect(connection, provider, command, commandArgs)
+                if (!provider) {
+                    vscode.window.showErrorMessage(`Could not find provider ${connection.driver} for connection ${choice}`)
+                } else {
+                    this.connect(connection, provider, command, commandArgs)
+                }
             }
         })
     }

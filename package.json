@@ -184,8 +184,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "test": "mocha -r ts-node/register test/unit/**/*.test.ts",
-    "deploy": "npm run compile; cd ui && npm run deploy",
-    "build-api": "tsc -d --declarationMap src/data_source.ts --outDir api-out"
+    "deploy": "npm run compile; cd ui && npm run deploy"
   },
   "devDependencies": {
     "@types/chai": "^4.2.11",
@@ -195,13 +194,13 @@
     "@types/vscode": "^1.42.0",
     "chai": "^4.2.0",
     "mocha": "^7.1.2",
-    "ts-node": "^8.9.1",
+    "ts-node": "^10.9.1",
     "typescript": "^5.1.3"
   },
   "dependencies": {
+    "jdbcode-api": "file:./api",
     "node-uuid": "^1.4.8",
-    "parsimmon": "^1.13.0",
-    "jdbcode-api": "file:./api"
+    "parsimmon": "^1.13.0"
   },
   "extensionDependencies": []
 }

@@ -107,10 +107,15 @@ export function activate(context: vscode.ExtensionContext) {
     let api = {
         // Register the datasource provider
         registerDataSourceProvider(dataSourceProvider: DataSourceProvider) {
-            dbController.registerDataSourceProvider(dataSourceProvider)
+            try {
+                dbController.registerDataSourceProvider(dataSourceProvider)
+            } catch (error) {
+                console.log(`Unable to register provider ${error}`);
+            }
         }
     }
     return api
+
 }
 
 
