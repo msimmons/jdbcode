@@ -5,5 +5,8 @@
     },
     "search.exclude": {
         "out": true // set this to false to include "out" folder in search results
-    }
+    },
+    "mochaExplorer.require": "ts-node/register",
+    "mochaExplorer.files": "test/**/*.test.ts",
+    "mochaExplorer.mochaPath": "node_modules/mocha"
 }

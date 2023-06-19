@@ -4,8 +4,8 @@
 import * as vscode from 'vscode';
 import {  ConfigurationTarget } from 'vscode'
 import { DatabaseController } from './database_controller';
-import { DatabaseService } from './database_service';
-import { ConnectionData, DriverData } from './models';
+import { ConnectionData } from './models';
+import { DataSourceProvider } from 'jdbcode-api';
 
 let dbController: DatabaseController
 
@@ -15,43 +15,20 @@ export function activate(context: vscode.ExtensionContext) {
     dbController.start()
 
     /**
-     * Add a new JDBC driver definition
-     */
-    context.subscriptions.push(vscode.commands.registerCommand('jdbcode.addDriver', () => {
-        let config = vscode.workspace.getConfiguration("jdbcode")
-        let drivers = config.get('drivers') as Array<object>
-        vscode.window.showOpenDialog({filters: {'Driver JS': ['js']}, canSelectMany: false}).then((jarFile) => {
-            if (!jarFile || jarFile.length == 0) return
-            vscode.window.showInputBox({ placeHolder: 'A name for the driver' }).then((name) => {
-                if (!name) return
-                if (drivers.find((d) => { return d['name'] === name })) {
-                    vscode.window.showErrorMessage('Driver ' + name + ' already exists')
-                    return
-                }
-                vscode.window.showInputBox({ placeHolder: 'Driver class name' }).then((driverClass) => {
-                    if (!driverClass) return
-                    drivers.push({ name: name, jarFile: jarFile[0]['path'], driverClass: driverClass })
-                    config.update('drivers', drivers, ConfigurationTarget.Global)
-                })
-            })
-        })
-    }))
-
-    /**
      * Add a new connection definition
      */
     context.subscriptions.push(vscode.commands.registerCommand('jdbcode.addConnection', async () => {
         let config = vscode.workspace.getConfiguration("jdbcode")
         let connections = config.get('connections') as Array<ConnectionData>
-        let drivers = config.get('drivers') as Array<DriverData>
+        let providers = dbController.getProviderNames() as Array<string>
         let name = await vscode.window.showInputBox({ placeHolder: 'A name for the connection' })
         if (!name) return
         if (connections.find((c) => { return c.name === name })) {
             vscode.window.showErrorMessage(`Connection '${name}' already exists`)
             return
         }
-        let driver = await vscode.window.showQuickPick(drivers.map(d=>d.name), {canPickMany: false, placeHolder: 'Choose Driver' })
-        if (!driver) return
+        let provider = await vscode.window.showQuickPick(providers, {canPickMany: false, placeHolder: 'Choose Provider' })
+        if (!provider) return
         let username = await vscode.window.showInputBox({ placeHolder: 'Username' })
         if (!username) return
         let password = await vscode.window.showInputBox({ placeHolder: 'Password', password: true })
@@ -61,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
         let port = await vscode.window.showInputBox({ placeHolder: 'Database Port', validateInput: (value) => {return parseInt(value, 10).toString() === "NaN" ? "Must be a number" : undefined}})
         if (!port) return
         let database = await vscode.window.showInputBox({ placeHolder: 'Database Name' })
-        let connecton = {name: name, driver: driver, username: username, password: password, host: host, port: parseInt(port), database: database} as ConnectionData
+        let connecton = {name: name, driver: provider, username: username, password: password, host: host, port: parseInt(port), database: database} as ConnectionData
         connections.push(connecton)
         await config.update('connections', connections, ConfigurationTarget.Workspace)
     }))
@@ -117,7 +94,30 @@ export function activate(context: vscode.ExtensionContext) {
         dbController.showDescribe(dbObject)
     }))
 
+    /* Export an api for use by data source provider extensions like so:
+
+        jdbcode = vscode.extensions.getExtension('contrapt.jdbcode').exports
+        let provider = new FooProvider()
+        jdbcode.registerDataSourceProvider(provider)
+
+        "extensionDependencies": [
+            "contrapt.jdbcode"
+        ]
+    */
+    let api = {
+        // Register the datasource provider
+        registerDataSourceProvider(dataSourceProvider: DataSourceProvider) {
+            try {
+                dbController.registerDataSourceProvider(dataSourceProvider)
+            } catch (error) {
+                console.log(`Unable to register provider ${error}`);
+            }
+        }
+    }
+    return api
+
 }
+
 
 export function trimSql(sql: string) : string {
     if (sql.charAt(sql.length-1) === ';') return sql.slice(0, sql.length-1)

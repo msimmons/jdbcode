@@ -1,5 +1,5 @@
 import { TreeItem, TreeItemCollapsibleState } from 'vscode'
-import { Namespace, TableData, ViewData, ProcedureData, SequenceData, SynonymData, OtherData, RowSet } from 'tsdbc'
+import { Namespace, TableData, ViewData, ProcedureData, SequenceData, SynonymData, OtherData, RowSet } from 'jdbcode-api'
 
 export interface DriverData {
     name: string

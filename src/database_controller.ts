@@ -7,12 +7,14 @@ import { DatabaseTreeProvider } from "./database_tree_provider";
 import { SchemaContentProvider } from "./schema_content_provider";
 import { CompletionProvider } from "./completion_provider";
 import { ResultSetWebview } from './resultset_webview';
-import { ConnectionData, DriverData, ObjectNode, SqlStatement } from './models';
+import { ConnectionData, ObjectNode, SqlStatement } from './models';
 import { SchemaWebview } from './schema_webview';
+import { CodeLensProvider } from './code_lens_provider';
+import { SqlParser } from './sql_parser';
+import { DataSourceProvider } from 'jdbcode-api';
 
 let makeUUID = require('node-uuid').v4;
 
-const ADD_DRIVER_CHOICE = '+ Add Driver'
 const ADD_CONNECTION_CHOICE = '+ Add Connection'
 const CLOSE_CHOICE = '+ Close'
 
@@ -23,11 +25,14 @@ export class DatabaseController {
     private schemaTreeProvider: DatabaseTreeProvider
     private schemaContentProvider: SchemaContentProvider
     private completionProvider: CompletionProvider
+    private codeLensProvider: CodeLensProvider
     private resultSetViews: ResultSetWebview[] = []
     private schemaViews: SchemaWebview[] = []
     private docCount = 0
 
+    private providerMap: Map<string, DataSourceProvider> = new Map<string, DataSourceProvider>()
     private service: DatabaseService
+    private parser: SqlParser
     private context: vscode.ExtensionContext
 
     constructor(context: vscode.ExtensionContext) {
@@ -38,6 +43,7 @@ export class DatabaseController {
         this.outputChannel = vscode.window.createOutputChannel("JDBCode")
         let config = this.getConfig()
         this.service = new DatabaseService(this.outputChannel, config.get<boolean>('debug'))
+        this.parser = new SqlParser()
         this.createStatusBar()
         this.registerProviders()
     }
@@ -63,22 +69,37 @@ export class DatabaseController {
         vscode.workspace.registerTextDocumentContentProvider(this.schemaContentProvider.scheme, this.schemaContentProvider)
         this.schemaTreeProvider = new DatabaseTreeProvider(this.service)
         vscode.window.registerTreeDataProvider(this.schemaTreeProvider.viewId, this.schemaTreeProvider)
+        this.codeLensProvider = new CodeLensProvider()
+        vscode.languages.registerCodeLensProvider('sql', this.codeLensProvider)
     }
 
-    async connect(connection: ConnectionData, driver: DriverData, command?: string) {
+    registerDataSourceProvider(provider: DataSourceProvider) {
+        this.outputChannel.appendLine(`Registering data source provider ${provider.name}`)
+        this.providerMap.set(provider.name, provider)
+    }
+
+    getProviderNames() : Array<string> {
+        return Array.from(this.providerMap.keys())
+    }
+
+    logToChannel(message: string) {
+        this.outputChannel.appendLine(message);
+    }
+
+    async connect(connection: ConnectionData, provider: DataSourceProvider, command?: string, commandArgs?: any[]) {
         // Disconnect first if necessary
         await this.disconnect()
         // Send connection info to server, it will create connection pool if it doesn't already exist
         vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: "Connect to DB" }, async (progress) => {
             progress.report({ message: 'Connecting to ' + connection.name })
             try {
-                await this.service.connect(connection, driver)
+                await this.service.connect(connection, provider)
                 this.schemaTreeProvider.clear()
                 this.completionProvider.updateSchemas()
                 this.statusBarItem.text = '$(database) ' + connection.name
                 vscode.commands.executeCommand('setContext', 'jdbcode.context.isConnected', true)
                 if (command) {
-                    vscode.commands.executeCommand(command)
+                    vscode.commands.executeCommand(command, ...(commandArgs ? commandArgs : []))
                 }
             }
             catch (error) {
@@ -109,24 +130,25 @@ export class DatabaseController {
      * Let the user choose a connection to connect to and execute the optional
      * command after connecting
      */
-    async chooseAndConnect(command?: string) {
+    async chooseAndConnect(command?: string, commandArgs?: any[]) {
         let config = vscode.workspace.getConfiguration("jdbcode")
         let connections = config.get('connections') as ConnectionData[]
-        let drivers = config.get('drivers') as DriverData[]
-        let choices = [ADD_DRIVER_CHOICE, ADD_CONNECTION_CHOICE]
+        let choices = [ADD_CONNECTION_CHOICE]
         if (this.service.getConnection()) choices.push(CLOSE_CHOICE + ': ' + this.service.getConnection().name)
         choices = choices.concat(connections.map((it) => { return it.name }))
         vscode.window.showQuickPick(choices, {}).then((choice) => {
             if (!choice) return
-            else if (choice.startsWith(ADD_DRIVER_CHOICE)) vscode.commands.executeCommand('jdbcode.addDriver')
             else if (choice.startsWith(ADD_CONNECTION_CHOICE)) vscode.commands.executeCommand('jdbcode.addConnection')
             else if (choice.startsWith(CLOSE_CHOICE)) vscode.commands.executeCommand('jdbcode.disconnect')
             else {
                 let connection = connections.find((it) => { return it.name === choice })
                 if (!connection) return;
-                let driver = drivers.find((it) => { return it.name === connection.driver })
-                if (!driver) vscode.window.showErrorMessage('Could not find driver for connection ' + choice)
-                this.connect(connection, driver, command)
+                let provider = this.providerMap.get(connection.driver)
+                if (!provider) {
+                    vscode.window.showErrorMessage(`Could not find provider ${connection.driver} for connection ${choice}`)
+                } else {
+                    this.connect(connection, provider, command, commandArgs)
+                }
             }
         })
     }
@@ -136,25 +158,36 @@ export class DatabaseController {
      * suppressTxn defaults to false which will honor the global 'autocommit' setting.  Setting it to true
      * will set autocommit to true regardless of global setting
      */
-    async executeSql(suppressTxn: boolean = false) {
+    async executeSql(suppressTxn: boolean = false, range?: vscode.Range) {
         let editor = vscode.window.activeTextEditor
         if (!editor) return
-        let sql = editor.document.getText(editor.selection)
+        let document = editor.document
+        let sql = undefined
+        // If we are passed a range, use it
+        if (range) {
+            let start = document.offsetAt(range.start)
+            let end = document.offsetAt(range.end)
+            sql = this.parser.findStatement(document.getText(), start, end)
+        } else {
+            // Otherwise look for a selection
+            sql = document.getText(editor.selection)
+        }
+        // Otherwise, get the SQL at the current
         if (!sql) {
-            let selection = this.getSqlRange(editor.selection.start, editor.document)
-            sql = editor.document.getText(selection)
+            let position = document.offsetAt(editor.selection.start)
+            sql = this.parser.findStatement(document.getText(), position, position)
             if (!sql) return
         }
         if (!this.service.getConnection()) {
             let command = suppressTxn ? "jdbcode.execute-autocommit" : "jdbcode.execute"
-            this.chooseAndConnect(command)
+            this.chooseAndConnect(command, [range])
             return
         }
         let queryId: string = makeUUID()
         let sqlStatement: SqlStatement = {
             id: queryId,
             connection: this.service.getConnection().name,
-            sql: this.trimSql(sql),
+            sql: sql,
             suppressTxn: suppressTxn
         }
         /**
@@ -190,7 +223,7 @@ export class DatabaseController {
     }
 
     /**
-     * Show a description of the given object 
+     * Show a description of the given object
      */
     async showDescribe(node: ObjectNode) {
         let panel = new SchemaWebview(this.context, this.service)
@@ -221,34 +254,4 @@ export class DatabaseController {
         })
     }
 
-    private trimSql(sql: string) : string {
-        sql = sql.trim()
-        if (sql.charAt(sql.length-1) === ';') return sql.slice(0, sql.length-1)
-        else return sql
-    }
-
-    /**
-     * We expect SQL statements to be separated by configured delimiters (eg. ';') or an empty line; this is the easiest way to pick them out
-     * as you are typing.  This method figures out where the sql statement starts and ends based on those assumptions
-     * 
-     * @param position The current cursor position
-     * @param document The document you are editing
-     */
-    getSqlRange(position: vscode.Position, document: vscode.TextDocument) : vscode.Range {
-        // Search forwards for empty line, semicolon line ending or end of document
-        let endLine
-        for (endLine = position.line; endLine < document.lineCount-1; endLine++) {
-            if (!document.lineAt(endLine+1).text) break
-            if (document.lineAt(endLine).text.endsWith(';')) break
-        }
-        // Search backwards for empty line, semicolon or beginning of document
-        let startLine
-        for (startLine = position.line; startLine > 0; startLine--) {
-            if (!document.lineAt(startLine-1).text) break
-            if (document.lineAt(startLine-1).text.endsWith(';')) break
-        }
-        let start = new vscode.Position(startLine, 0)
-        let end = new vscode.Position(endLine, document.lineAt(endLine).text.length)
-        return new vscode.Range(start, end)
-    }
 }
